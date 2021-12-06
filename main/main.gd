@@ -1,7 +1,9 @@
 extends Control
 
-var soul
+var souls
 var rialto
+var fibonacci
+var alternatives
 var map 
 var ready = false
 
@@ -34,28 +36,49 @@ func init_map():
 		tile.set_type(obj)
 		map.tiles.append(tile)
 
-func init_rialto():
+func init_fibonacci_rialto():
+	fibonacci = Global.Fibonacci.new()
 	rialto = Global.Rialto.new()
 
+func init_alternatives():
+	var indexs = 4
+	alternatives = []
+	
+	for _i in indexs:
+		var alternative = Global.Alternative.new()
+		alternative.set_index(_i)
+		alternatives.append(alternative)
+
 func init_soul():
-	soul = Global.Soul.new()
-	soul.current.vocation = "herbal"
-	soul.set_parent(self) 
-	soul.set_duty_cycle()
-		
-		
-	print(soul.duty_cycle)
+	var n = 3
+	souls = []
+	var vocations = {
+		"getter": 8,
+		"artificer": 3
+	}
+	var index = 0
+	
+	for vocation in vocations.keys():
+		for _i in vocations[vocation]:
+			var soul = Global.Soul.new()
+			soul.vocations.append(vocation)  
+			var obj = {}
+			obj.index = index
+			obj.parent = self
+			soul.init(obj)
+			souls.append(soul)
+			index += 1
 
 func _ready():
 	init_map()
-	init_rialto()
+	init_fibonacci_rialto()
+	init_alternatives()
 	init_soul()
 	ready = true
 	
 func _process(delta):
 	if ready:
-		if soul.duty_cycle.size() > 0:
-			if soul.temp.time_cost <= 0:
-				soul.what_should_i_do()
-				print(soul.temp.task, "  ", soul.temp.time_cost)
-		soul.temp.time_cost -= delta
+		for soul in souls:
+			soul.time_flow(delta)
+			
+		rialto.time_flow(delta)
