@@ -5,6 +5,8 @@ var rialto
 var fibonacci
 var alternatives
 var map 
+var items = []
+var lots = []
 var ready = false
 
 func init_map():
@@ -29,11 +31,11 @@ func init_map():
 		
 		if _i > 0:
 			obj.type = "meadow"
-			obj.breed = "herb "+str((_i-1)%3)
+			obj.breed = "herb breed "+str((_i-1)%3)
 		else:
 			obj.type = "city"
 		
-		tile.set_type(obj)
+		tile.set_(obj)
 		map.tiles.append(tile)
 
 func init_fibonacci_rialto():
@@ -49,7 +51,7 @@ func init_alternatives():
 		alternative.set_index(_i)
 		alternatives.append(alternative)
 
-func init_soul():
+func init_souls():
 	var n = 3
 	souls = []
 	var vocations = {
@@ -73,7 +75,7 @@ func _ready():
 	init_map()
 	init_fibonacci_rialto()
 	init_alternatives()
-	init_soul()
+	init_souls()
 	ready = true
 	
 func _process(delta):

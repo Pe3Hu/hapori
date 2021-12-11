@@ -4,6 +4,7 @@ extends Node
 var main
 var rng = RandomNumberGenerator.new()
 var stamina_expense = {}
+var primary_key = {}
 
 func init_stamina_expense():
 	stamina_expense.routine = -2
@@ -13,9 +14,14 @@ func init_stamina_expense():
 	stamina_expense.after_stasis = -16
 	stamina_expense.rest = 64
 
+func init_primary_key():
+	primary_key.item = 0
+	primary_key.lot = 0
+
 func _ready():
 	main = get_node("/root/main")
 	init_stamina_expense()
+	init_primary_key()
 
 class Soul:
 	var index
@@ -44,9 +50,9 @@ class Soul:
 	func init_bag():
 		bag.max_weight = 100
 		bag.curret_weight = 0
-		bag.max_cargo = 10
-		bag.cargo = {}
-		
+		bag.max_items = 10
+		bag.item_indexs = []
+
 		stamina.total = 100
 		stamina.current = stamina.total
 		stamina.expense = 0
@@ -66,30 +72,30 @@ class Soul:
 
 	func set_priority():
 		var options = []
-		
+
 		for alternative in Global.main.alternatives:
 			for predispose in alternative.predisposes:
 				var index_f = vocations.find(predispose.vocation)
 				if index_f != -1:
 					var flag = true
-					
+
 					if alternative.name == "auction selling":
-						if bag.cargo.keys().size() <= 0:
+						if bag.item_indexs.size() <= 0:
 							flag = false
-					
+
 					if flag:						
 						options.append(alternative.name)
-		
+
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, options.size()-1)
 		priority = options[index_r]
-		
+
 		set_duty_cycle()
 
 	func set_duty_cycle():
 		duty_cycle = []
 		temp.time_cost = 0
-		
+
 		match priority:
 			"herbal harvest":
 				duty_cycle.append("rest")
@@ -109,13 +115,13 @@ class Soul:
 				duty_cycle.append("select lot for auction buying")
 				duty_cycle.append("registration for auction")
 				duty_cycle.append("bidding")
-		
+
 		duty_cycle.append("move on")
 
 	func what_should_i_do():
 		if bidding == false:
 			temp.task = duty_cycle.pop_front()
-		
+
 		match temp.task:
 			"rest":
 				rest()
@@ -150,22 +156,22 @@ class Soul:
 				bidding = true
 			"move on":
 				set_priority()
-	
+
 		make_efforts()
 
 	func make_efforts():
 		var routines = ["select prey","select wetland","wetland reserve","select lot for auction buying","select lot for auction selling","registration for auction"]
 		var trips = ["wetland trip","return trip"]
 		var stasiss = ["bidding"]
-		
+
 		var index_f = routines.find(temp.task)
 		if index_f != -1:
 			stamina.expense = Global.stamina_expense.routine
-		
+
 		index_f = trips.find(temp.task)
 		if index_f != -1:
 			stamina.expense = Global.stamina_expense.trip
-			
+
 		index_f = stasiss.find(temp.task)
 		if index_f != -1:
 			stamina.expense = Global.stamina_expense.in_stasis
@@ -196,18 +202,18 @@ class Soul:
 		
 		for tile in parent.map.tiles:
 			if tile.type == "meadow":
-				if tile.obj.breed == temp.best_prey:
+				if tile.landscape.breed == temp.best_prey:
 					tiles.append(tile)
 		
 		var max_available = 0
 		var options = []
 		
 		for tile in tiles:
-			if tile.obj.available.size() > max_available:
-				max_available = tile.obj.available.size()
+			if tile.landscape.available.size() > max_available:
+				max_available = tile.landscape.available.size()
 				options = [ tile ]
 			else:
-				if tile.obj.available.size() == max_available:
+				if tile.landscape.available.size() == max_available:
 					options.append(tile)
 		
 		Global.rng.randomize()
@@ -216,14 +222,14 @@ class Soul:
 
 	func wetland_reserve():
 		reserve.cols_count = 1
-		var availables = temp.best_wetland.obj.available
+		var availables = temp.best_wetland.landscape.available
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, availables.size()-1)
 		reserve.cols_begin = availables[index_r]
 		availables.remove(index_r)
 
 	func prey_espial():
-		var seeds = temp.best_wetland.obj.seeds
+		var seeds = temp.best_wetland.landscape.seeds
 		var hitch_on_move = 0.01
 		var hitch_on_overlook = 0.03
 		var hitch_on_sprout = 0.05
@@ -238,87 +244,72 @@ class Soul:
 				if seeds[_i][_j] != 0:
 					sprout_time += pow(hitch_on_sprout,seeds[_i][_j])
 					
-					var cargo = {}
-					cargo.where = temp.best_wetland.type
-					cargo.what = temp.best_wetland.obj.breed
-					cargo.grade = seeds[_i][_j]
-					cargo.loss = {}
-					cargo.loss.name = ""
+					var item = Global.Item.new()
+					item.features.where = temp.best_wetland
+					item.features.what = "loot orb"
+					item.features.grade = seeds[_i][_j]
+					item.features.loss = {}
+					item.features.loss.name = ""
 					
 					var input = {}
-					input.complexity = cargo.grade + 2
+					input.complexity = item.features.grade + 2
 					input.bonus = 0
 					input.loss = ""
 					input.amount = 0
 					
 					Global.main.fibonacci.roll(input)
-					cargo.loss.name = input.loss
-					cargo.loss.amount = input.amount
+					item.features.loss.name = input.loss
+					item.features.loss.amount = input.amount
 					
-					if cargo.loss.name != "total":
-						add_to_bag(cargo)
+					if item.features.loss.name != "total":
+						item.add_to_all_items()
+						item.add_owner_bag(self)
+						
 					temp.best_wetland.pluck(_i,_j)
 		
-		move_time = reserve.cols_count * temp.best_wetland.obj.n * hitch_on_move
-		overlook_time = reserve.cols_count * temp.best_wetland.obj.n * hitch_on_overlook
+		move_time = reserve.cols_count * temp.best_wetland.landscape.n * hitch_on_move
+		overlook_time = reserve.cols_count * temp.best_wetland.landscape.n * hitch_on_overlook
 		temp.time_cost = move_time + overlook_time + sprout_time
-		print(bag.cargo)
-
-	func add_to_bag(cargo):
-		var index_f = bag.cargo.keys().find(cargo.what)
-		
-		if index_f == -1:
-			bag.cargo[cargo.what] = {}
-		
-		index_f = bag.cargo[cargo.what].keys().find(cargo.grade)
-		
-		if index_f == -1:
-			bag.cargo[cargo.what][cargo.grade] = []
-		
-		bag.cargo[cargo.what][cargo.grade].append(cargo.loss)
+		print("bag indexs",bag.item_indexs)
 
 	func discover_vocation():
 		temp.time_cost = 0
 
 	func select_buying_lot():
-		lot = {}
+		lot = Global.Lot.new()
 		lot.owner = self
 		lot.role = "buy"
-		lot.name = "herb 2"
-		lot.category = "ingredient"
-		lot.quality = "all"
-		lot.loss = "all"
-		lot.integrity = "all"
-		lot.amount = 1
+		lot.what = "loot orb"
+		lot.where = "herb breed 2"
+		lot.components = []
 		lot.market = null
+		lot.item = null
 		
 	func select_selling_lot():
-		var quality_index = 0
-		lot = {}
+		lot = Global.Lot.new()
 		lot.owner = self
 		lot.role = "sell"
-		lot.name = "herb 2"
-		var key = bag.cargo[lot.name].keys()[0]
-		if bag.cargo[lot.name][key].size() > quality_index:
-			var best_in_bag = bag.cargo[lot.name][key][quality_index]
-			lot.quality = key
-			lot.loss = best_in_bag.name
-			lot.integrity = best_in_bag.amount
-			lot.amount = 1
+		lot.item = Global.main.items[bag.item_indexs[0]]
+		lot.what = lot.item.features.what
+		lot.where = lot.item.features.where.landscape.breed
+		lot.components = []
+		lot.market = null
+		
+		if true:#bag.cargo[lot.what][key].size() > quality_index:
+#			var best_in_bag = bag.cargo[lot.what][key][quality_index]
+#			lot.quality = key
+#			lot.loss = best_in_bag.name
+#			lot.integrity = best_in_bag.amount
+#			lot.amount = 1
 			lot.market = null
-			lot.give_index = quality_index
-			lot.give_key = key
+#			lot.give_index = quality_index
+#			lot.give_key = key
 		else:
 			print('bag error')
 
 	func registration_for_auction():
 		Global.main.rialto.add_lot(lot)
-	
-	func give_lot_to(new_owner):
-		#var swap = bag.cargo[lot.name][lot.give_key][lot.give_index]
-		new_owner.after_trade.append(lot)
-		bag.cargo[lot.name][lot.give_key].remove(lot.give_index)
-	
+
 	func die():
 		var index_f = Global.main.souls.find(self)
 		Global.main.souls.remove(index_f)
@@ -343,103 +334,106 @@ class Soul:
 class Tile: 
 	var type
 	var index
-	var obj = {}
+	var landscape = {}
 	
-	func set_type(obj):
-		type = obj.type
-		index = obj.index
+	func set_(landscape):
+		type = landscape.type
+		index = landscape.index
 		
 		match type:
 			"meadow":
-				init_seeds(obj.breed)
+				init_seeds(landscape.breed)
 				burst_into_blossom()
 	
 	func init_seeds(_breed):
-		obj.grade = 1
-		obj.n = 10
-		obj.current_herb = 0 
-		obj.total_herb = obj.n*3
-		obj.seeds = []
-		obj.available = []
-		obj.sourdough = false
-		obj.breed = _breed
+		landscape.grade = 1
+		landscape.n = 10
+		landscape.current_herb = 0 
+		landscape.total_herb = landscape.n*3
+		landscape.seeds = []
+		landscape.available = []
+		landscape.sourdough = false
+		landscape.breed = _breed
 		
-		for _i in obj.n:
-			obj.seeds.append([])
-			obj.available.append(_i)
+		for _i in landscape.n:
+			landscape.seeds.append([])
+			landscape.available.append(_i)
 			
-			for _j in obj.n:
-				obj.seeds[_i].append(0)
+			for _j in landscape.n:
+				landscape.seeds[_i].append(0)
 		
 	func burst_into_blossom():
-		if !obj.sourdough:
-			sprout(obj.grade+1)
+		if !landscape.sourdough:
+			sprout(landscape.grade+1)
 		
-		while obj.current_herb < obj.total_herb:
-			sprout(obj.grade)
+		while landscape.current_herb < landscape.total_herb:
+			sprout(landscape.grade)
 	
 	func sprout(_grade):
 		Global.rng.randomize()
-		var _i = Global.rng.randi_range(0, obj.n-1)
-		var _j = Global.rng.randi_range(0, obj.n-1)
+		var _i = Global.rng.randi_range(0, landscape.n-1)
+		var _j = Global.rng.randi_range(0, landscape.n-1)
 		
-		while obj.seeds[_i][_j] != 0:
+		while landscape.seeds[_i][_j] != 0:
 			_i += 1
 			
-			if _i == obj.n:
+			if _i == landscape.n:
 				_i = 0
 				_j += 1
 			
-			if _j == obj.n:
+			if _j == landscape.n:
 				_j = 0
 		
-		obj.seeds[_i][_j] = _grade
-		obj.current_herb += pow(_grade, 2)
+		landscape.seeds[_i][_j] = _grade
+		landscape.current_herb += pow(_grade, 2)
 	
 	func pluck(_i,_j):
-		obj.current_herb -= pow(obj.seeds[_i][_j], 2)
-		obj.seeds[_i][_j] = 0
+		landscape.current_herb -= pow(landscape.seeds[_i][_j], 2)
+		landscape.seeds[_i][_j] = 0
 
 class Rialto:
 	var prices = {
-		"herb 0": 10,
-		"herb 1": 20,
-		"herb 2": 30
+		"loot orb": {
+			"herb breed 0": 10,
+			"herb breed 1": 20,
+			"herb breed 2": 30
+		}
 	}
-	var sorted_prices = ["herb 2","herb 1","herb 0"]
+	var sorted_prices = ["herb breed 2","herb breed 1","herb breed 0"]
 	var lots = {
 		"sell":
 			[],
 		"buy":
 			[]
 	}
-	var lot_index = 0
 	var markets = []
 	
 	func add_lot(lot):
-		lot.index = lot_index
-		lot.deal_price = prices[lot.name] * lot.owner.greed.benchmark
+		lot.index = Global.primary_key.lot
+		lot.price.deal = prices[lot.what][lot.where] * lot.owner.greed.benchmark
+		lot.price.min = prices[lot.what][lot.where] * lot.owner.greed.min
+		lot.price.max = prices[lot.what][lot.where] * lot.owner.greed.max
 		var index = find_market(lot)
 		lot.market = markets[index]
 		markets[index].lots[lot.role].append(lot)
 		markets[index].requirements_check()
 		
 		lots[lot.role].append(lot)
-		lot_index += 1
+		Global.primary_key.lot += 1
 	
 	func find_market(lot):
 		var exist_flag = false
 		var market = null
 		
 		for _market in markets:
-			if _market.lot_name == lot.name:
+			if _market.subject == lot.what:
 				exist_flag = true
 				market = _market
 		
 		if !exist_flag:
 			market = Global.Market.new()
-			market.lot_name = lot.name
-			market.price = prices[lot.name]
+			market.subject = lot.what
+			market.price = prices[lot.what]
 			markets.append(market)
 		
 		var index_f = markets.find(market)
@@ -582,7 +576,7 @@ class Alternative:
 				predisposes.append(predispose)
 
 class Market: 
-	var lot_name = null
+	var subject = null
 	var price = null
 	var lots = {
 		"buy": [],
@@ -603,7 +597,7 @@ class Market:
 		conduct = flag
 	
 	func conduct():
-		print("!!!!!!!!!")
+		print("!conduct!")
 		var keys = ["sell","buy"]
 		
 		if lots["buy"].size() < lots["sell"].size():
@@ -626,11 +620,11 @@ class Market:
 			deal[keys[1]] = options[keys[1]][index_r]
 			 
 			if deal_check(deal):
-				deal["buy"].owner.essence -= deal["sell"].owner.greed.benchmark * price
-				deal["sell"].owner.give_lot_to(deal["buy"].owner)
+				deal["buy"].owner.essence -= deal["sell"].price.deal
+				deal["sell"].item.add_owner_bag(deal["buy"].owner)
 				deal["buy"].owner.bidding = false
 				deal["sell"].owner.bidding = false
-				
+				print("!after deal! ",deal["sell"].owner.index,deal["sell"].owner.bag.item_indexs,deal["buy"].owner.index,deal["buy"].owner.bag.item_indexs)
 			options[keys[0]].remove(_i)
 			options[keys[1]].remove(index_r)
 			_i -= 1
@@ -640,8 +634,52 @@ class Market:
 		requirements_check()
 	
 	func deal_check(deal):
-		var current = deal["sell"].owner.greed.benchmark * price
-		var flag = current < deal["buy"].owner.greed.max * price
+		var current = deal["sell"].price.deal
+		var flag = current < deal["buy"].price.max
 		 
-		print(current, " ", price," ", deal["buy"].owner.greed.max * price)
+		print("!deal check!", deal["sell"].price, " ", deal["buy"].price)
 		return flag
+
+class Item:
+	var index
+	var source
+	var owner
+	var features = {}
+	
+	func add_to_all_items():
+		index = Global.primary_key.item
+		Global.primary_key.item += 1
+		Global.main.items.append(self)
+	
+	func add_owner_bag(new_owner):
+		if owner != null:
+			var index_f = owner.bag.item_indexs.find(index)
+			
+			if index_f != -1:
+				owner.bag.item_indexs.remove(index_f)
+			
+		owner = new_owner
+		owner.bag.item_indexs.append(index)
+	
+	func destroy():
+		var index_f = Global.main.items.find(self)
+		
+		if index_f != -1:
+			Global.main.items.remove(index_f)
+		
+		if owner != null:
+			index_f = owner.bag.item_indexs.find(index)
+			
+			if index_f != -1:
+				owner.bag.item_indexs.remove(index_f)
+
+class Lot:
+	var index
+	var role
+	var what
+	var where
+	var components
+	var owner
+	var item
+	var market
+	var price = {}
