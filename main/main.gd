@@ -7,6 +7,9 @@ var alternatives
 var map 
 var items = []
 var lots = []
+var sequences = []
+var verges = []
+var recipes = []
 var ready = false
 
 func init_map():
@@ -51,30 +54,90 @@ func init_alternatives():
 		alternative.set_index(_i)
 		alternatives.append(alternative)
 
+func init_recipes():
+	var sequences_ = []
+	var n = 3
+	var i = 0
+	
+	while i < n:
+		sequences_.append([])
+		
+		if sequences_.size() == 1:
+			for _i in n:
+				sequences_[i].append([_i])
+		else:
+			for _i in sequences_[i-1].size():
+				for _j in n:
+					var index_f = sequences_[i-1][_i].find(_j)
+					
+					if index_f == -1: 
+						var sequence = []
+						sequence.append_array(sequences_[i-1][_i])
+						sequence.append(_j)
+						sequences_[i].append(sequence)
+		
+		i += 1
+	
+	sequences.append_array(sequences_[n-1])
+	
+	var criterions = {}
+	criterions.n = 15
+	criterions.limit = {}
+	criterions.limit.l = 32
+	criterions.limit.success = 18
+	
+	for _a in criterions.n:
+		for _b in criterions.n:
+			for _c in criterions.n:
+				var verges_ = [_a+1,_a+_b,_b+_c]
+				
+				if Global.triangle_check(verges_, criterions.limit.l):
+					verges.append(verges_)
+
+	verges.shuffle()
+	
+	for _i in criterions.limit.success:
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, sequences.size()-1)
+		var sequence = sequences[index_r]
+		Global.rng.randomize()
+		index_r = Global.rng.randi_range(0, verges.size()-1)
+		var verges_ = verges[index_r]
+		
+		var recipe = Global.Recipe.new()
+		recipe.set_extract(sequence, verges_)
+		recipe.index = Global.primary_key.recipe
+		recipes.append(recipe)
+		verges.remove(index_r)
+		Global.primary_key.recipe += 1
+	
+	for recipe in recipes:
+		print(recipe.extract,recipe.sum)
+
 func init_souls():
 	var n = 3
 	souls = []
 	var vocations = {
-		"getter": 8,
-		"artificer": 3
+		"getter": 0,
+		"artificer": 10
 	}
-	var index = 0
 	
 	for vocation in vocations.keys():
 		for _i in vocations[vocation]:
 			var soul = Global.Soul.new()
 			soul.vocations.append(vocation)  
 			var obj = {}
-			obj.index = index
+			obj.index = Global.primary_key.soul
 			obj.parent = self
 			soul.init(obj)
 			souls.append(soul)
-			index += 1
+			Global.primary_key.soul += 1
 
 func _ready():
 	init_map()
 	init_fibonacci_rialto()
 	init_alternatives()
+	init_recipes()
 	init_souls()
 	ready = true
 	
