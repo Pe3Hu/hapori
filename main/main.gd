@@ -81,7 +81,7 @@ func init_recipes():
 	sequences.append_array(sequences_[n-1])
 	
 	var criterions = {}
-	criterions.n = 15
+	criterions.n = 20
 	criterions.limit = {}
 	criterions.limit.l = 32
 	criterions.limit.success = 18
@@ -89,11 +89,14 @@ func init_recipes():
 	for _a in criterions.n:
 		for _b in criterions.n:
 			for _c in criterions.n:
-				var verges_ = [_a+1,_a+_b,_b+_c]
+				var a = _a + 1
+				var b = a + _b
+				var c = b + _c
+				var verges_ = [a,b,c]
 				
 				if Global.triangle_check(verges_, criterions.limit.l):
 					verges.append(verges_)
-
+	
 	verges.shuffle()
 	
 	for _i in criterions.limit.success:
@@ -108,7 +111,6 @@ func init_recipes():
 		recipe.set_extract(sequence, verges_)
 		recipe.index = Global.primary_key.recipe
 		recipes.append(recipe)
-		verges.remove(index_r)
 		Global.primary_key.recipe += 1
 	
 	for recipe in recipes:
@@ -119,7 +121,7 @@ func init_souls():
 	souls = []
 	var vocations = {
 		"getter": 0,
-		"artificer": 10
+		"artificer": 1
 	}
 	
 	for vocation in vocations.keys():

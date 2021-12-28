@@ -105,6 +105,7 @@ class Soul:
 		extract.gamma = 1000
 		calculations.failed = []
 		calculations.current = null
+		calculations.blunder = []
  
 	func set_priority():
 		if !stop:
@@ -393,13 +394,9 @@ class Soul:
 		calculations.current.set_extract(sequence, verges)
 
 	func reinvent():
-		stop = true
-		if false:
-			calculations.current = Global.Calculation.new()
-			calculations.current.categorize_extract(calculations.failed)
-			calculations.current.categorize_sequence(calculations.failed)
-			calculations.current.categorize_verges(calculations.failed)
-		print("reinvent")
+		calculations.current = Global.Calculation.new()
+		calculations.current.categorize_all(calculations.failed)
+		#print(index, " reinvent")
 
 	func make_necessary_list():
 		temp.time_cost = 0.1
@@ -436,6 +433,7 @@ class Soul:
 					calculations.failed.append(calculations.current)
 				else:
 					print("+bingo+")
+				calculations.blunder.append(calculations.current)
 		else:
 			stop = true
 			
@@ -834,10 +832,12 @@ class Calculation:
 	var extract = {}
 	var sequence = []
 	var verges = []
-	var recipe  = []
+	var recipe
 	var sum = 0
 	var hints = {}
 	var fail = false
+	var guess = []
+	var facts = []
 	
 	func set_extract(sequence_, verges_):
 		sequence.append_array(sequence_) 
@@ -872,11 +872,20 @@ class Calculation:
 		coincides.recipe = recipe.index
 		coincides.rate = 1
 		
+		var reruns_a = {}
+		
 		for _i in recipe.sequence.size():
 			var flag = false
+			
 			if recipe.sequence[_i] == sequence[_i]:
 				coincides.sequence += 1
 				flag = true
+			
+			
+			if reruns_a.keys().find(recipe.verges[_i]) == -1:
+				reruns_a[recipe.verges[_i]] = 1
+			else:
+				reruns_a[recipe.verges[_i]] += 1
 			
 			var index_f = verges.find(recipe.verges[_i])
 			
@@ -887,6 +896,25 @@ class Calculation:
 					coincides.sequence -= 1
 					coincides.verges -= 1
 					coincides.extract += 1
+		
+		var reruns_b = {}
+		
+		for _i in verges.size():
+			if reruns_b.keys().find(verges[_i]) == -1:
+				reruns_b[verges[_i]] = 1
+			else:
+				reruns_b[verges[_i]] += 1
+		
+		print(">",reruns_a, reruns_b)
+		for key in reruns_b.keys():
+			var index_f = reruns_a.keys().find(key)
+			
+			if index_f != -1:
+				var shift = reruns_a[key] - reruns_b[key]
+
+				if shift > 0:
+					coincides.verges += shift
+					coincides.extract -= shift
 		
 		coincides.rate += coincides.sequence + coincides.verges + coincides.extract * 4
 		coincides.success = coincides.rate -1 == extract.keys().size() * 4
@@ -899,6 +927,7 @@ class Calculation:
 			if recipe.sum == sum:
 				var coincides_ = set_coincides(recipe)
 				coincides.append(coincides_)
+				print(recipe.index)
 		
 		if coincides.size() == 0:
 			fail = true
@@ -912,16 +941,152 @@ class Calculation:
 			Global.rng.randomize()
 			var index_r = Global.rng.randi_range(0, options.size()-1)
 			hints = coincides[options[index_r]]
+			recipe = hints.recipe
 			print("#",hints)
 
-	func check():
-		var flag = {}
-		flag.l = false
-		flag.verges = 0
-		flag.sequence = 0
+	func categorize_extract(fails):
+		var indexs = [0,1,2]
+		var fact_counter = 0
 		
-		for recipe in Global.main.recipes:
-			pass
+		for fact in facts:
+			if fact.sequence:
+				fact_counter += 1
+		
+		if fact_counter == 3:
+			sequence = [-1,-1,-1]
+			
+			for fact in facts:
+				if fact.sequence:
+					sequence[fact.fail.sequence[fact.index]] = fact.index
+			
+			return
+		else:
+			var options = []
+			
+			for fail in fails:
+				if fail.hints.sequences == 0:
+					for sequences_ in Global.sequences:
+						return
+
+	func categorize_sequence(fails):
+		if guess.size() > 0:
+			for guess_ in guess:
+				if guess_.sequence:
+					swap_sequence(guess_)
+					return 
+		else:
+			if fails.size() > 0:
+				return
+
+	func categorize_verges(fails):
+		pass
+
+	func categorize_all(fails):
+		var sequence_options = []
+		var verges_options = []
+		var sum = fails[0].sum
+		
+		for sequence_ in Global.main.sequences:
+			sequence_options.append(sequence_)
+		
+		for verges_ in Global.main.verges:
+			var sum_ = 0
+			
+			for verge in verges_:
+				sum_ += verge
+			
+			if sum == sum_:
+				verges_options.append(verges_) 
+		
+		var _i = sequence_options.size() - 1
+		print(verges_options)
+		
+		while _i >= 0:
+			var option = sequence_options[_i]
+			var flag = true
+			
+			for fail in fails:
+				var count = 0
+				
+				for _j in option.size():
+					if option[_j] == fail.sequence[_j]:
+						count += 1
+				
+				flag = count == fail.hints.sequence + fail.hints.extract
+			
+			if !flag:
+				sequence_options.remove(_i)
+			
+			_i -= 1
+		
+		_i = verges_options.size() - 1
+		
+		while _i >= 0:
+			var option = verges_options[_i]
+			var flag = true
+			
+			for fail in fails:
+				var count = 0
+				
+				for _j in option.size():
+					var index_f = option.find(fail.verges[_j])
+					
+					if index_f != -1:
+						count += 1
+				
+				flag = count == fail.hints.verges + fail.hints.extract
+			
+			if !flag:
+				verges_options.remove(_i)
+			
+			_i -= 1
+			
+		print(Global.main.recipes[fails[0].recipe].sequence, Global.main.recipes[fails[0].recipe].verges)
+		print(fails[0].sequence,fails[0].verges)
+		print(sequence_options,verges_options)
+
+	func swap_sequence(guess_):
+		var sequence = [true,true,true]
+		var old_indexs = []
+		var swaped_indexs = []
+		sequence[guess_.index] = false
+		
+		for _i in sequence.size():
+			if sequence[_i]:
+				old_indexs.push(_i)
+		
+		for _i in sequence.size():
+			if sequence[_i]:
+				swaped_indexs.push(_i)
+			else:
+				var obj = {}
+				obj.fail = guess_.fail
+				obj.index = old_indexs.pop_back()
+				obj.sequence = true
+				obj.verges = false
+				guess.append(obj)
+
+	func check_extract(fails, fail_, index_r):
+		var flag = true
+		
+		for fail in fails:
+			if fail_ != fail:
+				if fail_.sequence[index_r] == fail.sequence[index_r] && fail_.verges[index_r] == fail.verges[index_r]:
+					if fail.hints.extract == 0:
+						flag = false
+		
+		return flag
+
+	func check_guess(fail):
+		var flag = true
+		
+		for guess_ in guess:
+			if guess_.sequence:
+				flag = fail.sequence[guess_.index] != guess_.fail.sequence[guess_.index]
+			if guess_.verges:
+				flag = fail.verges[guess_.index] != guess_.fail.verges[guess_.index]
+		
+		return flag
 
 class Recipe:
 	var index
