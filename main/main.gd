@@ -113,8 +113,8 @@ func init_recipes():
 		recipes.append(recipe)
 		Global.primary_key.recipe += 1
 	
-	for recipe in recipes:
-		print(recipe.extract,recipe.sum)
+#	for recipe in recipes:
+#		print(recipe.index,recipe.extract,recipe.sum)
 
 func init_souls():
 	var n = 3
