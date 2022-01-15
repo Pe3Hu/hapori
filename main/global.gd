@@ -1147,3 +1147,8 @@ class Recipe:
 					extract.beta = verges_[index_f]
 				2: 
 					extract.gamma = verges_[index_f]
+
+class Cell:
+	var index
+	var grid
+	var tile

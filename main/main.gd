@@ -144,7 +144,7 @@ func _ready():
 	ready = true
 	
 func _process(delta):
-	if ready:
+	if false:#ready:
 		for soul in souls:
 			soul.time_flow(delta)
 			
