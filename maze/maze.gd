@@ -5,6 +5,7 @@ const N = 1
 const E = 2
 const S = 4
 const W = 8
+const ALL = 15
 const step = 3
 
 var steped_walls = {Vector2(0, -step): N, Vector2(step, 0): E, 
@@ -19,15 +20,16 @@ var neighbors = [
 	]
 var deadends = []
 var roads = []
+var highways = []
 var crossroads = []
 var cells = []
-var connects = {}
+var links = {}
 
 var a = 31
 var tile_size = 64  # tile size (in pixels)
 var width = a  # width of map (in tiles)
 var height = a # height of map (in tiles)
-var zoom = 3
+var zoom = 2
 var half
 
 # get a reference to the map for convenience
@@ -35,12 +37,13 @@ onready var map = $tileMap
 
 func _ready():
 	$camera2D.zoom = Vector2(zoom, zoom)
-	$camera2D.position = map.map_to_world(Vector2(width/2, height/2))
+	$camera2D.position = map.map_to_world(Vector2(width/2, height/2*1.55))
 	
 	half = ceil(height / 2)
 	
 	tile_size = map.cell_size
 	make_maze()
+	init_cells()
 	find_deadends()
 
 func make_maze():
@@ -106,20 +109,6 @@ func build_center(unvisited):
 			
 			if _j == step*2+1:
 				unvisited.append(cell)
-		#unvisited.append(cell + neighbor)
-#				for _k in 2:
-#					var cell_ = cell
-#
-#					for _l in step:
-#						connect_cells(cell_, neighbors[(_i+1+_k*2)%ways_.size()])
-#						cell_ = cell_ + neighbors[(_i+1+_k*2)%ways_.size()]
-			
-#		for _j in 2:
-#			var cell_ = cell + neighbor
-#
-#			for _l in half:
-#				connect_cells(cell_, neighbors[(_i+1+_j*2)%ways_.size()])
-#				cell_ = cell_ + neighbors[(_i+1+_j*2)%ways_.size()]
 			
 		cell =  Vector2(half, half) + neighbor *2
 		connect_cells(cell, neighbors[(_i+3)%ways_.size()])
@@ -136,12 +125,15 @@ func build_center(unvisited):
 			for _l in 3:
 				connect_cells(cell, neighbors[(_i+1+_j*2)%ways_.size()])
 				cell = cell + neighbors[(_i+1+_j*2)%ways_.size()]
-		
+
 func check_center(x_,y_):
 	var size = step
 	var x = ( x_ <= half + size && x_ >= half - size )
 	var y = ( y_ <= half + size && y_ >= half - size )
 	return x&&y
+
+func check_borders(cell_):
+	return cell_.x < 0 || cell_.x >= width || cell_.y < 0 || cell_.y >= height
 
 func check_neighbors(cell, unvisited):
 	# returns an array of cell's unvisited neighbors
@@ -158,50 +150,139 @@ func connect_cells(cell, neighbor):
 		map.set_cellv(cell, walls)
 		map.set_cellv(cell+neighbor, n_walls)
 
-func find_deadends():
-	var ends = []
-	
-	for neighbor in neighbors:
-		ends.append(N|E|S|W-cell_walls[neighbor])
-	
-	for x in range(width):
-		for y in range(height):
-			var tile = map.get_cellv(Vector2(x, y)) 
-			var index_f = ends.find(tile)
-			
-			if index_f != -1:
-				deadends.append(tile)
-	
+func init_cells():
 	for x in range(width):
 		for y in range(height):
 			var cell = Global.Cell.new()
-			cell.index = x * width + y
+			cell.index = int(x * width + y)
 			cell.grid = Vector2(x, y)
 			cell.tile = map.get_cellv(cell.grid)
 			cells.append(cell)
 			
-			if cell.tile != N|E|S|W:
-				connects[cell.index] = []
+			if cell.tile != 15:
+				links[cell.index] = []
 				
-				connects[cell.index].append(1)#neighbor
+				for neighbor in neighbors:
+					if check_tile_include(cell.tile, neighbor):
+						var cell_neighbor = cell.grid + neighbor
+						
+						if !check_borders(cell_neighbor):
+							var index = int(cell_neighbor.x * width + cell_neighbor.y)
+							links[cell.index].append(index)
+				
+				cell.neighbors.append_array(links[cell.index]) 
+				
+				if cell.neighbors.size() > 2:
+					crossroads.append(cell.index)
+					cell.crossroad = Global.primary_key.crossroad
+					Global.primary_key.crossroad += 1
+
+func find_deadends():
+	for cell in cells:
+		if cell.neighbors.size() == 1:
+			deadends.append(cell.index)
 	
-	print(deadends.size())
-	check_tile_include(3,0)
+	print("deadends: ",deadends.size())
 	
-func check_tile_include(tile, way):
-	var reverse = N|E|S|W - tile + 1
+	for deadend in deadends:
+		var road = [deadend]
+		var new_cell = cells[deadend].neighbors[0]
+		make_road(new_cell,road)
+		roads.append(road)
+	
+			#map.set_cellv(cells[cell_index].grid, 16)
+	
+	for crossroad in crossroads:
+		for neighbor in cells[crossroad].neighbors:
+			if cells[neighbor].crossroad != -1:
+				var road = [crossroad,neighbor]
+				make_road(neighbor,road)
+				roads.append(road)
+	
+	for _i in roads.size():
+		for cell_index in roads[_i]:
+			cells[cell_index].roads.append(_i)			
+	
+	for crossroad in crossroads:
+		for neighbor in cells[crossroad].neighbors:
+			if cells[neighbor].roads.size() == 0:
+				var road = [crossroad]
+				make_road(neighbor,road)
+				roads.append(road)
+				map.set_cellv(cells[crossroad].grid, 16)
+				map.set_cellv(cells[neighbor].grid, 16)#highways
+	
+	
+	var first
+	var end  
+	
+#	for road in roads:
+#		if check_deadend(road) && road.size() == 4:
+#			#first = road[0]
+#
+#
+#			for _i in range(0, 3):#road.size()-1
+#				map.set_cellv(cells[road[_i]].grid, 16)
+	
+#	for _i in roads.size():
+#		if roads[_i].size() == 2:
+#			for cell_index in roads[_i]:
+#				map.set_cellv(cells[cell_index].grid, 16)
+
+func make_road(begin,road):
+	var new_cell = begin
+	
+	while cells[new_cell].neighbors.size() == 2:
+		road.append(new_cell)
+		
+		for neighbor in cells[new_cell].neighbors:
+			var index_f = road.find(neighbor)
+			
+			if index_f == -1:
+				new_cell = neighbor
+	
+	new_cell = road[road.size()-1]
+	
+	for neighbor in cells[new_cell].neighbors:
+			var index_f = road.find(neighbor)
+			
+			if index_f == -1:
+				road.append(neighbor)
+
+func tile_include_ways(tile):
+	var reverse = 15 - tile
 	var ways = [N,E,S,W]
+	var reverse_ways = [W,S,E,N]
 	var binary = []
 	var bin = pow(2,ways.size()-1)
+	var result = []
 	
 	for _i in ways.size():
-		var flag =reverse > bin
+		var flag = reverse >= bin
 		
-		if reverse > bin:
+		if flag:
 			reverse -= bin
+			result.append(reverse_ways[_i])
 		
 		bin/=2
-		binary.append(flag)
-		print(reverse)
-	
-	print(binary)
+	return result
+
+func check_tile_include(tile, neighbor):
+	var included_ways = tile_include_ways(tile)
+	var ways = [N,E,S,W]
+	var index_f = included_ways.find(cell_walls[neighbor])
+	var result = index_f != -1
+	return result
+
+func convert_grid(grid):
+	return grid.x * width + grid.y 
+
+func check_highways(road):
+	var begin = road[0]
+	var end = road[road.size()-1]
+	return cells[begin].crossroad != -1 && cells[end].crossroad != -1
+
+func check_deadend(road):
+	var begin = road[0]
+	var end = road[road.size()-1]
+	return cells[begin].crossroad == -1 || cells[end].crossroad == -1

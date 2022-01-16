@@ -2,6 +2,7 @@ extends Node
 
 
 var main
+var maze
 var rng = RandomNumberGenerator.new()
 var stamina_expense = {}
 var primary_key = {}
@@ -19,9 +20,11 @@ func init_primary_key():
 	primary_key.lot = 0
 	primary_key.soul = 0
 	primary_key.recipe = 0
+	primary_key.crossroad = 0
 
 func _ready():
 	main = get_node("/root/main")
+	maze = get_node("/root/main/mazeIsometric")
 	init_stamina_expense()
 	init_primary_key()
 
@@ -1152,3 +1155,7 @@ class Cell:
 	var index
 	var grid
 	var tile
+	var neighbors = []
+	var roads = []
+	var highways = []
+	var crossroad = -1

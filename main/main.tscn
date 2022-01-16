@@ -11,4 +11,4 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="maze_isometric" parent="." instance=ExtResource( 2 )]
+[node name="mazeIsometric" parent="." instance=ExtResource( 2 )]
