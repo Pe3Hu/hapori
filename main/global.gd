@@ -20,6 +20,8 @@ func init_primary_key():
 	primary_key.lot = 0
 	primary_key.soul = 0
 	primary_key.recipe = 0
+	primary_key.road = 0
+	primary_key.highway = 0
 	primary_key.crossroad = 0
 
 func _ready():
@@ -1159,3 +1161,10 @@ class Cell:
 	var roads = []
 	var highways = []
 	var crossroad = -1
+
+class Highway:
+	var index
+	var roads = []
+	var crossroads = []
+	var cells = []
+	var branchs = []
