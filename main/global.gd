@@ -23,6 +23,8 @@ func init_primary_key():
 	primary_key.road = 0
 	primary_key.highway = 0
 	primary_key.crossroad = 0
+	primary_key.coast = 0
+	primary_key.area = 0
 
 func _ready():
 	main = get_node("/root/main")
@@ -1160,7 +1162,12 @@ class Cell:
 	var neighbors = []
 	var roads = []
 	var highways = []
+	var all_neighbor_cells = []
+	var districts = []
 	var crossroad = -1
+	var city = -1
+	var area = -1
+	var coast = -1
 
 class Highway:
 	var index
@@ -1168,3 +1175,10 @@ class Highway:
 	var crossroads = []
 	var cells = []
 	var branchs = []
+
+class Coast:
+	var index
+	var road
+	var coast
+	var neighbors = []
+	var area = -1

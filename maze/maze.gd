@@ -18,6 +18,12 @@ var neighbors = [
 	Vector2(0, 1), 
 	Vector2(-1, 0)
 	]
+var corner_neighbors = [
+	Vector2(1, -1), 
+	Vector2(1, 1),
+	Vector2(-1, 1), 
+	Vector2(-1, -1)
+	]
 var wall_neighbors = {
 	N: Vector2(0, -1),
 	E: Vector2(1, 0),
@@ -32,7 +38,8 @@ var clearcoles = []
 var crossroads = []
 var cells = []
 var links = {}
-var branchs = {}
+var coasts = []
+var areas = []
 
 var a = 31
 var tile_size = 64  # tile size (in pixels)
@@ -56,6 +63,9 @@ func _ready():
 	init_deadends()
 	init_highways()
 	init_branchs()
+	init_districts()
+	init_coasts()
+	init_areas()
 
 func init_maze():
 	var unvisited = []  # array of unvisited tiles
@@ -114,21 +124,24 @@ func init_cells():
 			
 			if cell.tile != 15:
 				links[cell.index] = []
+			
+			for neighbor in neighbors:
+				var cell_neighbor = cell.grid + neighbor
 				
-				for neighbor in neighbors:
-					if check_tile_include(cell.tile, neighbor):
-						var cell_neighbor = cell.grid + neighbor
-						
-						if !check_borders(cell_neighbor):
-							var index = int(cell_neighbor.x * width + cell_neighbor.y)
-							links[cell.index].append(index)
-				
+				if !check_borders(cell_neighbor):
+					var index = int(cell_neighbor.x * width + cell_neighbor.y)
+					cell.all_neighbor_cells.append(index)
+					
+					if check_tile_include(cell.tile, neighbor) && cell.tile != 15:
+						links[cell.index].append(index)
+			
+			if cell.tile != 15:
 				cell.neighbors.append_array(links[cell.index]) 
-				
-				if cell.neighbors.size() > 2:
-					crossroads.append(cell.index)
-					cell.crossroad = Global.primary_key.crossroad
-					Global.primary_key.crossroad += 1
+			
+			if cell.neighbors.size() > 2:
+				crossroads.append(cell.index)
+				cell.crossroad = Global.primary_key.crossroad
+				Global.primary_key.crossroad += 1
 
 func init_deadends():
 	for cell in cells:
@@ -147,7 +160,7 @@ func init_deadends():
 				asphalts.append(Global.primary_key.road)
 				var road = [crossroad,neighbor]
 				make_road(neighbor,road,"short")
-#
+
 	for crossroad in crossroads:
 		for neighbor in cells[crossroad].neighbors:
 			if cells[neighbor].roads.size() == 0:
@@ -166,7 +179,6 @@ func init_highways():
 		unvisited = set_unvisited_crossroad()
 
 func init_branchs():
-	var color = 16
 	var unvisited = []
 	
 	for clearcole in clearcoles:
@@ -180,18 +192,122 @@ func init_branchs():
 		
 		for clearcole in unvisited:
 			if highway.cells.has(roads[clearcole].back()):
-				highway.branchs.append(roads[clearcole])
-			
-		for branch in highway.branchs:
-			for cell_index in branch:
-				map.set_cellv(cells[cell_index].grid, color)
-				
-		for road in highway.roads:
-			for cell_index in roads[road]:
-				if cells[cell_index].crossroad == -1:
-					map.set_cellv(cells[cell_index].grid, color)
-		color += 2
+				highway.branchs.append(clearcole)
+	
+	unvisited = []
+	
+	for asphalt in asphalts:
+		var flag = false
 		
+		for highway in highways:
+			flag = flag || highway.roads.has(asphalt)
+		
+		if !flag:
+			unvisited.append(asphalt)
+	
+	for asphalt in unvisited:
+		for highway in highways:
+			if highway.cells.has(roads[asphalt].back()):
+				highway.branchs.append(asphalt)
+				break
+	
+	for _i in range(highways.size()-1,-1,-1):
+		var highway = highways[_i]
+		
+		if highway.roads.size() == 2 && highway.branchs.size() == 0:
+			var cells_ = []
+			var middle
+			
+			for road in highway.roads:
+				if cells_.has(roads[road].front()):
+					middle = roads[road].front()
+				else:
+					cells_.append(roads[road].front())
+				if cells_.has(roads[road].back()):
+					middle = roads[road].back()
+				else:
+					cells_.append(roads[road].back())
+			
+			var highways_ = []
+			highways_.append_array(cells[middle].highways)
+			highways_.erase(highway.index)
+			var main_highway = highways_[0]
+			
+			for road in highway.roads:
+				highways[main_highway].branchs.append(road)
+			
+			highways.remove(_i)
+
+func init_districts():
+	for cell in cells:
+		if cell.crossroad != -1:
+			var bans = []
+			
+			for neighbor in cell.all_neighbor_cells:
+				if cells[neighbor].roads.size() == 0:
+					cells[neighbor].city = cell.index
+					cell.districts.append(neighbor)
+					for district in cells[neighbor].all_neighbor_cells:
+						bans.append(district)
+			
+			for neighbor in cell.all_neighbor_cells:
+				if cells[neighbor].roads.size() != 0:
+					for district in cells[neighbor].all_neighbor_cells:
+						if cells[district].roads.size() == 0 && !bans.has(district):
+							cells[district].city = cell.index
+							cell.districts.append(district)
+
+func init_coasts():
+	var coasts_ = {}
+	
+	for road in roads.size():
+		for cell_ in roads[road]:
+			for neighbor in cells[cell_].all_neighbor_cells:
+				var cell = cells[neighbor]
+				
+				if cell.city == -1 && cell.roads.size() == 0:
+					var index_c = 1
+					
+					if !coasts_.keys().has(road):
+						coasts_[road] = [[],[]]
+						index_c = 0
+					
+					for neighbor_coast in cell.all_neighbor_cells:
+						for _i in coasts_[road].size():
+							if coasts_[road][_i].has(neighbor_coast):
+								index_c = _i
+					
+					coasts_[road][index_c].append(cell.index)
+					cell.coast = road * 2 + index_c
+	
+	#add corners
+	for cell in cells:
+		if cell.coast == -1 && cell.roads.size()==0 && cell.city == -1:
+			var coast_ = -1
+			var road_ = -1
+			
+			for corner_neighbor in corner_neighbors:
+				var grid = cell.grid + corner_neighbor
+				var index = convert_grid(grid)
+				
+				if cells[index].roads.size() > 0:
+					road_ = cells[index].roads[0]
+			
+			for neighbor in cell.all_neighbor_cells:
+				for coast in coasts_[road_].size():
+					if coasts_[road_].has(cell.index):
+						coast_ = coast
+						
+			coasts_[road_][coast_].append(cell.index)
+			cell.coast = road_ * 2 + coast_
+	
+	coasts = coasts_
+	
+func init_areas():
+	var areas_ = {}
+	color_highways()
+	for key in areas_.keys():
+		return
 
 func build_center(unvisited):
 	map.set_cellv(Vector2(half, half), 0)
@@ -452,3 +568,47 @@ func tile_include_ways(tile):
 		bin/=2
 	return result
 
+func get_highway_index(road):
+	var index = -1
+	
+	for highway in highways:
+		if highway.roads.has(road):
+			index = highway.index
+	return index
+
+func color_highways():
+	var color = 16 
+	for highway in highways:
+		for branch in highway.branchs:
+			for cell_index in roads[branch]:
+				if cells[cell_index].crossroad == -1:
+					map.set_cellv(cells[cell_index].grid, color)
+
+		if highway.roads.size() != -1:
+			for road in highway.roads:
+				for cell_index in roads[road]:
+					if cells[cell_index].crossroad == -1:
+						map.set_cellv(cells[cell_index].grid, color)
+		color += 2
+
+func color_coasts():
+	var color = 16
+	
+	for highway in highways:
+		for branch in highway.branchs:
+			
+			if coasts.keys().has(branch):
+				for coast in coasts[branch]:
+					for cell_ in coast:
+						var cell = cells[cell_]
+						map.set_cellv(cell.grid, color)
+
+		if highway.roads.size() != -1:
+			for road in highway.roads:
+
+				if coasts.keys().has(road):
+					for coast in coasts[road]:
+						for cell_ in coast:
+							var cell = cells[cell_]
+							map.set_cellv(cell.grid, color)
+		color += 2
