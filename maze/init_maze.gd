@@ -29,7 +29,7 @@ var wall_neighbors = {
 	E: Vector2(1, 0),
 	S: Vector2(0, 1),
 	W: Vector2(-1, 0)
-}
+	}
 var deadends = []
 var roads = []
 var highways = []
@@ -39,7 +39,7 @@ var crossroads = []
 var cells = []
 var links = {}
 var coasts = []
-var areas = []
+var clusters = []
 
 var a = 31
 var tile_size = 64  # tile size (in pixels)
@@ -65,7 +65,7 @@ func _ready():
 	init_branchs()
 	init_districts()
 	init_coasts()
-	init_areas()
+	init_clusters()
 
 func init_maze():
 	var unvisited = []  # array of unvisited tiles
@@ -116,7 +116,7 @@ func init_maze():
 func init_cells():
 	for x in range(width):
 		for y in range(height):
-			var cell = Global.Cell.new()
+			var cell = Maze.Cell.new()
 			cell.index = int(x * width + y)
 			cell.grid = Vector2(x, y)
 			cell.tile = map.get_cellv(cell.grid)
@@ -259,30 +259,24 @@ func init_districts():
 
 func init_coasts():
 	var coasts_ = {}
+	var coast_cells = {}
 	
-	for road in roads.size():
-		for cell_ in roads[road]:
-			for neighbor in cells[cell_].all_neighbor_cells:
-				var cell = cells[neighbor]
+	for road_ in roads.size():
+		for cell_ in roads[road_]:
+			for neighbor_ in cells[cell_].all_neighbor_cells:
+				var cell = cells[neighbor_]
 				
-				if cell.city == -1 && cell.roads.size() == 0:
-					var index_c = 1
+				if cell.city == -1 && cell.roads.size() == 0 && cell.coast == -1:
 					
-					if !coasts_.keys().has(road):
-						coasts_[road] = [[],[]]
-						index_c = 0
+					if !coasts_.keys().has(road_):
+						coasts_[road_] = []
 					
-					for neighbor_coast in cell.all_neighbor_cells:
-						for _i in coasts_[road].size():
-							if coasts_[road][_i].has(neighbor_coast):
-								index_c = _i
-					
-					coasts_[road][index_c].append(cell.index)
-					cell.coast = road * 2 + index_c
+					coasts_[road_].append(cell.index)
+					cell.coast = -2
 	
 	#add corners
 	for cell in cells:
-		if cell.coast == -1 && cell.roads.size()==0 && cell.city == -1:
+		if cell.coast == -1 && cell.roads.size() == 0 && cell.city == -1:
 			var coast_ = -1
 			var road_ = -1
 			
@@ -298,16 +292,121 @@ func init_coasts():
 					if coasts_[road_].has(cell.index):
 						coast_ = coast
 						
-			coasts_[road_][coast_].append(cell.index)
-			cell.coast = road_ * 2 + coast_
+			coasts_[road_].append(cell.index)
+			cell.coast = -2
 	
-	coasts = coasts_
+	for cell in cells:
+		cell.coast = -1
 	
-func init_areas():
-	var areas_ = {}
-	color_highways()
-	for key in areas_.keys():
-		return
+	for road_ in coasts_.keys(): 
+		var options = []
+		options.append_array(coasts_[road_])
+		
+		while options.size() > 0: 
+			var cell_ = options.pop_back()
+			var index_a = -1
+			
+			if !coast_cells.keys().has(road_):
+				coast_cells[road_] = [[]]
+			
+			var coasts_arrays = coast_cells[road_]
+			
+			for neighbor in cells[cell_].all_neighbor_cells:
+				for _i in coasts_arrays.size():
+					if coasts_arrays[_i].has(neighbor):
+						index_a = _i
+			
+			if index_a == -1:
+				index_a = coasts_arrays.size()-1
+				coasts_arrays.append([])
+				
+			coasts_arrays[index_a].append(cell_)
+		
+		for _i in coast_cells[road_].size()-1:
+			for _j in range(_i+1,coast_cells[road_].size()-1,1):
+				var flag = false
+				
+				for cell_ in coast_cells[road_][_j]:
+					
+					for neighbor in cells[cell_].all_neighbor_cells:
+						if coast_cells[road_][_i].has(neighbor):
+							flag = true
+				
+				if flag:
+					coast_cells[road_][_i].append_array(coast_cells[road_][_j])
+					coast_cells[road_][_j] = []
+	
+		for _i in range(coast_cells[road_].size()-1,-1,-1):
+			if coast_cells[road_][_i].size() == 0:
+				 coast_cells[road_].remove(_i)
+
+	for road_ in coast_cells.keys():
+		for _i in coast_cells[road_].size():
+			var coast = Maze.Coast.new()
+			coast.index = Global.primary_key.coast
+			coast.road = road_
+			coast.coast = _i
+			coast.cells.append_array(coast_cells[road_][_i])
+			
+			for cell_ in coast_cells[road_][_i]:
+				cells[cell_].coast = Global.primary_key.coast
+				
+			coasts.append(coast)
+			Global.primary_key.coast += 1
+	
+func init_clusters():
+	var clusters_ = []
+	
+	for coast in coasts:
+		for cell_ in coast.cells:
+			for neighbor in cells[cell_].all_neighbor_cells:
+				if cells[neighbor].roads.size() == 0 && cells[neighbor].city == -1:
+					if !coast.neighbors.has(cells[neighbor].coast) && cells[neighbor].coast != coast.index:
+						coast.neighbors.append(cells[neighbor].coast)
+						coasts[cells[neighbor].coast].neighbors.append(coast.index)
+	
+	for coast in coasts: 
+		var index_c = -1
+		var cluster = [coast.index]
+		cluster.append_array(coast.neighbors)
+		
+		for coast_ in cluster:
+			for _i in clusters_.size():
+				if clusters_[_i].has(coast_):
+					index_c = _i
+					
+		if index_c == -1:
+			index_c = clusters_.size()-1
+			clusters_.append([])
+		
+		for coast_ in cluster:
+			if !clusters_[index_c].has(coast_):
+				clusters_[index_c].append(coast_) 
+	
+	for _i in clusters_.size()-1:
+		for _j in range(_i+1,clusters_.size()-1,1):
+			var flag = false
+
+			for coast in clusters_[_j]:
+				for neighbor in coasts[coast].neighbors:
+					if clusters_[_i].has(neighbor):
+						flag = true
+
+			if flag:
+				clusters_[_i].append_array(clusters_[_j])
+				clusters_[_j] = []
+
+	for _i in range(clusters_.size()-1,-1,-1):
+		if clusters_[_i].size() == 0:
+			 clusters_.remove(_i)
+
+	for coasts in clusters_:
+		var cluster = Maze.Cluster.new()
+		cluster.index = Global.primary_key.cluster
+		cluster.coasts.append_array(coasts) 
+
+		clusters.append(cluster)
+		Global.primary_key.cluster += 1
 
 func build_center(unvisited):
 	map.set_cellv(Vector2(half, half), 0)
@@ -454,7 +553,7 @@ func make_highway(begin):
 	for cell_index in obj.cells:
 		cells[cell_index].highways.append(Global.primary_key.highway)
 	
-	var highway = Global.Highway.new()
+	var highway = Maze.Highway.new()
 	highway.index = Global.primary_key.highway
 	highway.roads = obj.highway
 	highway.crossroads = obj.crossroads
@@ -574,6 +673,10 @@ func get_highway_index(road):
 	for highway in highways:
 		if highway.roads.has(road):
 			index = highway.index
+		
+		if highway.branchs.has(road):
+			index = highway.index
+		
 	return index
 
 func color_highways():
@@ -592,23 +695,23 @@ func color_highways():
 		color += 2
 
 func color_coasts():
+	for coast in coasts:
+		var index = get_highway_index(coast.road)
+		var color = 16 + 2 * index
+
+		for cell_ in coast.cells:
+			var cell = cells[cell_]
+			map.set_cellv(cell.grid, color)
+
+func color_clusters():
 	var color = 16
 	
-	for highway in highways:
-		for branch in highway.branchs:
-			
-			if coasts.keys().has(branch):
-				for coast in coasts[branch]:
-					for cell_ in coast:
-						var cell = cells[cell_]
-						map.set_cellv(cell.grid, color)
-
-		if highway.roads.size() != -1:
-			for road in highway.roads:
-
-				if coasts.keys().has(road):
-					for coast in coasts[road]:
-						for cell_ in coast:
-							var cell = cells[cell_]
-							map.set_cellv(cell.grid, color)
-		color += 2
+	for cluster_ in clusters:
+		for coast_ in cluster_.coasts:
+			for cell_ in coasts[coast_].cells:
+				var cell = cells[cell_]
+				map.set_cellv(cell.grid, color)
+		color += 1
+		
+		if color == 30:
+			color = 16

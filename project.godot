@@ -17,11 +17,15 @@ config/icon="res://assets/icon.png"
 [autoload]
 
 Global="*res://main/global.gd"
+Member="*res://main/member.gd"
+Rialto="*res://main/rialto.gd"
+Maze="*res://main/maze.gd"
+Loot="*res://main/loot.gd"
 
 [display]
 
 window/size/width=1600
-window/size/height=800
+window/size/height=200
 
 [physics]
 

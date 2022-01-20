@@ -42,15 +42,15 @@ func init_map():
 		map.tiles.append(tile)
 
 func init_fibonacci_rialto():
-	fibonacci = Global.Fibonacci.new()
-	rialto = Global.Rialto.new()
+	fibonacci = Loot.Fibonacci.new()
+	rialto = Rialto.Rialto.new()
 
 func init_alternatives():
 	var indexs = 4
 	alternatives = []
 	
 	for _i in indexs:
-		var alternative = Global.Alternative.new()
+		var alternative = Member.Alternative.new()
 		alternative.set_index(_i)
 		alternatives.append(alternative)
 
@@ -68,9 +68,7 @@ func init_recipes():
 		else:
 			for _i in sequences_[i-1].size():
 				for _j in n:
-					var index_f = sequences_[i-1][_i].find(_j)
-					
-					if index_f == -1: 
+					if !sequences_[i-1][_i].has(_j): 
 						var sequence = []
 						sequence.append_array(sequences_[i-1][_i])
 						sequence.append(_j)
@@ -107,14 +105,11 @@ func init_recipes():
 		index_r = Global.rng.randi_range(0, verges.size()-1)
 		var verges_ = verges[index_r]
 		
-		var recipe = Global.Recipe.new()
+		var recipe = Loot.Recipe.new()
 		recipe.set_extract(sequence, verges_)
 		recipe.index = Global.primary_key.recipe
 		recipes.append(recipe)
 		Global.primary_key.recipe += 1
-	
-#	for recipe in recipes:
-#		print(recipe.index,recipe.extract,recipe.sum)
 
 func init_souls():
 	var n = 3
@@ -126,7 +121,7 @@ func init_souls():
 	
 	for vocation in vocations.keys():
 		for _i in vocations[vocation]:
-			var soul = Global.Soul.new()
+			var soul = Member.Soul.new()
 			soul.vocations.append(vocation)  
 			var obj = {}
 			obj.index = Global.primary_key.soul
@@ -144,7 +139,7 @@ func _ready():
 	ready = true
 	
 func _process(delta):
-	if false:#ready:
+	if ready:
 		for soul in souls:
 			soul.time_flow(delta)
 			

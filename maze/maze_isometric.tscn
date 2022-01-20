@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://maze/maze.gd" type="Script" id=1]
+[ext_resource path="res://maze/init_maze.gd" type="Script" id=1]
 [ext_resource path="res://maze/iso_tiles.tres" type="TileSet" id=2]
 [ext_resource path="res://maze/tile_map.gd" type="Script" id=3]
 
