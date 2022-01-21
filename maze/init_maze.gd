@@ -53,7 +53,7 @@ onready var map = $tileMap
 
 func _ready():
 	$camera2D.zoom = Vector2(zoom, zoom)
-	$camera2D.position = map.map_to_world(Vector2(width/2, height/2*1.55))
+	$camera2D.position = map.map_to_world(Vector2(width/2*1.25, height/2*1.35))
 	
 	half = ceil(height / 2)
 	tile_size = map.cell_size
@@ -66,6 +66,7 @@ func _ready():
 	init_districts()
 	init_coasts()
 	init_clusters()
+	color_clusters()
 
 func init_maze():
 	var unvisited = []  # array of unvisited tiles
@@ -98,15 +99,18 @@ func init_maze():
 			stack.append(current)
 			# remove walls from *both* cells
 			var dir = next - current
-			var current_walls = map.get_cellv(current) - steped_walls[dir]
-			var next_walls = map.get_cellv(next) - steped_walls[-dir]
+			#var current_walls = map.get_cellv(current) - steped_walls[dir]
+			#var next_walls = map.get_cellv(next) - steped_walls[-dir]
 			var way = dir/step
 			var index_f = neighbors.find(way)
 			var shifted_way = neighbors[(2+index_f)%neighbors.size()]
+			
 			connect_cells(current, way)
+			
 			for _i in step - 2:
 				var cell = current + way * (_i + 1)
 				connect_cells(cell, way)
+				
 			connect_cells(next, shifted_way)
 			current = next
 			unvisited.erase(current)
@@ -277,7 +281,6 @@ func init_coasts():
 	#add corners
 	for cell in cells:
 		if cell.coast == -1 && cell.roads.size() == 0 && cell.city == -1:
-			var coast_ = -1
 			var road_ = -1
 			
 			for corner_neighbor in corner_neighbors:
@@ -287,13 +290,7 @@ func init_coasts():
 				if cells[index].roads.size() > 0:
 					road_ = cells[index].roads[0]
 			
-			for neighbor in cell.all_neighbor_cells:
-				for coast in coasts_[road_].size():
-					if coasts_[road_].has(cell.index):
-						coast_ = coast
-						
 			coasts_[road_].append(cell.index)
-			cell.coast = -2
 	
 	for cell in cells:
 		cell.coast = -1
@@ -353,7 +350,7 @@ func init_coasts():
 				
 			coasts.append(coast)
 			Global.primary_key.coast += 1
-	
+
 func init_clusters():
 	var clusters_ = []
 	
@@ -400,10 +397,10 @@ func init_clusters():
 		if clusters_[_i].size() == 0:
 			 clusters_.remove(_i)
 
-	for coasts in clusters_:
+	for coasts_ in clusters_:
 		var cluster = Maze.Cluster.new()
 		cluster.index = Global.primary_key.cluster
-		cluster.coasts.append_array(coasts) 
+		cluster.coasts.append_array(coasts_) 
 
 		clusters.append(cluster)
 		Global.primary_key.cluster += 1
@@ -653,7 +650,6 @@ func tile_include_ways(tile):
 	var reverse = 15 - tile
 	var ways = [N,E,S,W]
 	var reverse_ways = [W,S,E,N]
-	var binary = []
 	var bin = pow(2,ways.size()-1)
 	var result = []
 	

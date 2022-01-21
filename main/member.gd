@@ -13,17 +13,20 @@ class Soul:
 	var stamina = {}
 	var reserve = {}
 	var greed = {}
-	var lot = {}
-	var essence = 1000
+	var lots = []
+	var essence = 2000
 	var bidding = false
 	var outlay = {}
 	var extract = {}
 	var necessary = []
-	var invent = false
 	var calculations = {}
+	var scroll = {}
+	var product = {}
 	var recipes = []
+	var unfinished = []
 	var stop = false
 	var bingo = false
+	var finish = null
 
 	func init(obj):
 		index = obj.index
@@ -64,9 +67,9 @@ class Soul:
 		}
 
 	func init_extracts():
-		extract.alpha = 1000
-		extract.beta = 1000
-		extract.gamma = 1000
+		extract["alpha"] = 10
+		extract["beta"] = 10
+		extract["gamma"] = 10
 		calculations.failed = []
 		calculations.current = null
 		calculations.blunder = []
@@ -75,26 +78,33 @@ class Soul:
 		if !stop:
 			var options = []
 			
-			for alternative in Global.main.alternatives:
-				for predispose in alternative.predisposes:
-					if vocations.has(predispose.vocation):
-						var flag = true
-						
-						if alternative.name == "sell booty":
-							if bag.item_indexs.size() <= 0:
-								flag = false
-						
-						if alternative.name == "buy necessary":
-							if necessary.size() <= 0:
-								flag = false
-						
-						if alternative.name == "invent recipe":
-							if !bingo && invent:
-								flag = false
-						
-						if flag:
-							options.append(alternative.name)
+			if necessary.size() > 0:
+				lay_waste_bag()
+				
+			if necessary.size() > 0:
+				options.append("buy necessary")
+			else:
+				if finish == null:
+					for alternative in Global.main.alternatives:
+						for predispose in alternative.predisposes:
+							if vocations.has(predispose.vocation):
+								var flag = true
+							
+								if alternative.name == "sell booty":
+									if bag.item_indexs.size() <= 0:
+										flag = false
+								
+								if alternative.name == "start making product":
+									if recipes.size() == 0:
+										flag = false
+								
+								if flag:
+									for pressure in predispose.pressure:
+										options.append(alternative.name)
+				else:
+					options.append(finish)
 
+			#print(options)
 			Global.rng.randomize()
 			var index_r = Global.rng.randi_range(0, options.size()-1)
 			priority = options[index_r]
@@ -117,19 +127,22 @@ class Soul:
 				duty_cycle.append("registration for auction")
 				duty_cycle.append("bidding")
 			"buy necessary":
-				duty_cycle.append("select lot for auction buying")
 				duty_cycle.append("registration for auction")
 				duty_cycle.append("bidding")
-			"invent recipe":
+			"start inventing recipe":
 				duty_cycle.append("make calculation")
 				duty_cycle.append("make necessary list")
 				duty_cycle.append("receive necessary")
+			"end inventing recipe":
 				duty_cycle.append("check calculation")
-			"make product":
+				duty_cycle.append("clear finish")
+			"start making product":
 				duty_cycle.append("select recipe")
 				duty_cycle.append("make necessary list")
 				duty_cycle.append("receive necessary")
+			"end making product":
 				duty_cycle.append("follow recipe")
+				duty_cycle.append("clear finish")
 				
 		duty_cycle.append("rest")
 		duty_cycle.append("move on")
@@ -161,8 +174,6 @@ class Soul:
 				temp.time_cost = 0.5
 			"discover vocation":
 				discover_vocation()
-			"select lot for auction buying":
-				select_buying_lot()
 			"select lot for auction selling":
 				select_selling_lot()
 			"registration for auction":
@@ -184,17 +195,20 @@ class Soul:
 			"bidding":
 				temp.time_cost = 0
 				bidding = true
+			"clear finish":
+				temp.time_cost = 0
+				finish = null
 		
 		make_efforts()
 
 	func make_efforts():
 		var routines = []
-		routines.append_array(["select prey","select wetland","wetland reserve","select lot for auction buying"])
+		routines.append_array(["select prey","select wetland","wetland reserve"])
 		routines.append_array(["select lot for auction selling","registration for auction", "make calculation"])
 		routines.append_array(["make necessary list","receive necessary","check calculation"])
 		routines.append_array(["select recipe","follow recipe"])
 		var trips = ["wetland trip","return trip"]
-		var stasiss = ["bidding"]
+		var stasiss = ["bidding","clear finish"]
 
 		if routines.has(temp.task):
 			stamina.expense = Global.stamina_expense.routine
@@ -211,6 +225,7 @@ class Soul:
 		
 		stamina.current -= stamina.expense
 		essence += stamina.expense * 1
+		
 		if outlay.flag:
 			outlay.current -= stamina.expense * 1
 		
@@ -230,9 +245,12 @@ class Soul:
 			outlay.flag = false
 
 	func find_best_prey():
-		outlay.flag = true
 		temp.time_cost = 0.1
-		temp.best_prey = parent.rialto.sorted_prices[0]
+		
+		outlay.flag = true
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, parent.rialto.sorted_prices.size()-1)
+		temp.best_prey = parent.rialto.sorted_prices[index_r]
 
 	func find_best_wetland():
 		var tiles = []
@@ -282,8 +300,8 @@ class Soul:
 				if seeds[_i][_j] != 0:
 					sprout_time += pow(hitch_on_sprout,seeds[_i][_j])
 					
-					var item = Global.Item.new()
-					item.features.where = temp.best_wetland
+					var item = Loot.Item.new()
+					item.features.where = temp.best_wetland.landscape.breed
 					item.features.what = "loot orb"
 					item.features.grade = seeds[_i][_j]
 					item.features.loss = {}
@@ -308,46 +326,43 @@ class Soul:
 		move_time = reserve.cols_count * temp.best_wetland.landscape.n * hitch_on_move
 		overlook_time = reserve.cols_count * temp.best_wetland.landscape.n * hitch_on_overlook
 		temp.time_cost = move_time + overlook_time + sprout_time
-		print("bag indexs",bag.item_indexs)
 
 	func discover_vocation():
 		temp.time_cost = 0
 
-	func select_buying_lot():
-		temp.time_cost = 0.1
-		lot = Global.Lot.new()
-		lot.owner = self
-		lot.role = "buy"
-		lot.what = "loot orb"
-		lot.where = "herb breed 2"
-		lot.components = []
-		lot.market = null
-		lot.item = null
-
 	func select_selling_lot():
 		temp.time_cost = 0.1
-		lot = Global.Lot.new()
-		lot.owner = self
-		lot.role = "sell"
-		lot.item = Global.main.items[bag.item_indexs[0]]
-		lot.what = lot.item.features.what
-		lot.where = lot.item.features.where.landscape.breed
-		lot.components = []
-		lot.market = null
-		lot.outlay = int(outlay.previous)
+		
+		postpone()
+		
+		for index_ in bag.item_indexs:
+			var lot = Bourse.Lot.new()
+			lot.owner = self
+			lot.role = "sell"
+			lot.item = Global.main.get_item_by_index(index_)
+			lot.what = lot.item.features.what
+			lot.where = lot.item.features.where
+			lot.components = []
+			lot.market = null
+			lot.outlay = int(outlay.previous)
+			lots.append(lot)
+
+	func postpone():
+		return
 
 	func registration_for_auction():
 		temp.time_cost = 0.1
-		Global.main.rialto.add_lot(lot)
+		
+		for lot in lots:
+			Global.main.rialto.add_lot(lot)
 
 	func make_calculation():
 		temp.time_cost = 0.1
 		
-		if !bingo:
-			if calculations.failed.size() == 0:
-				generate_calculation()
-			else:
-				reinvent()
+		if calculations.failed.size() == 0:
+			generate_calculation()
+		else:
+			reinvent()
 
 	func generate_calculation():
 		Global.rng.randomize()
@@ -366,27 +381,71 @@ class Soul:
 
 	func make_necessary_list():
 		temp.time_cost = 0.1
-		print("extract necessary list ",calculations.current.extract)
+		match priority:
+			"start inventing recipe":
+				scroll = calculations.current.extract
+			"start making product":
+				scroll = product.extract
+		print("extract necessary list ",scroll)
 		 
-		for _i in calculations.current.extract.keys().size():
-			var key = calculations.current.extract.keys()[_i]
-			var shortage = calculations.current.extract[key] - extract[key]
-			
+		for _i in scroll.keys().size():
+			var key = scroll.keys()[_i]
+			var shortage = scroll[key] - extract[key]
+		
 			if shortage > 0:
+				var where
+				
 				match _i:
 					0:
-						necessary.append("herb breed 0")
+						where = "herb breed 0"
 					1:
-						necessary.append("herb breed 1")
+						where = "herb breed 1"
 					2:
-						necessary.append("herb breed 2")
+						where = "herb breed 2"
+				
+				var need = {}
+				need.min = scroll[key]
+				need.key = key
+				need.where = where
+				necessary.append(need)
+
+	func lay_waste_bag():
+		var i = Global.main.items
+		var b = bag.item_indexs
+		for index_ in bag.item_indexs:
+			var item = Global.main.get_item_by_index(index_)
+			item.open()
+			
+		print(necessary)
+		for _i in range(necessary.size()-1,-1,-1):
+			if extract[necessary[_i].key] >= necessary[_i].min: 
+				necessary.remove(_i)
+		print(necessary)
 
 	func receive_necessary():
 		temp.time_cost = 0.1
+		
+		if necessary.size() > 0:
+			for necessary_ in necessary:
+				var lot = Bourse.Lot.new()
+				lot.owner = self
+				lot.role = "buy"
+				lot.what = "loot orb"
+				lot.where = necessary_.where
+				lot.components = []
+				lot.market = null
+				lot.item = null
+				
+				lots.append(lot)
+				
+		finish = priority 
+		finish.erase(0,5)
+		finish = "end"+finish 
+		#print(finish,necessary)
 
 	func check_calculation():
 		temp.time_cost = 0.1
-		
+		#print(necessary,calculations.current.extract)
 		for key in calculations.current.extract.keys():
 			extract[key] -= calculations.current.extract[key]
 		
@@ -398,25 +457,35 @@ class Soul:
 					calculations.failed.append(calculations.current)
 				else:
 					bingo = true
-					stop = true
+					print("!bingo!")
+					recipes.append(calculations.current.recipe)
+					calculations.failed = []
+					calculations.current = null
 				calculations.blunder.append(calculations.current)
 		else:
 			stop = true
 	
 	func select_recipe():
-		return
-
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, recipes.size()-1)
+		product = {}
+		product.recipe = recipes[index_r]
+		product.extract = product.recipe.extract
+		
 	func follow_recipe():
-		return
+		for key in product.extract .keys():
+			extract[key] -= product.extract[key]
 
 	func die():
 		var index_f = Global.main.souls.find(self)
 		Global.main.souls.remove(index_f)
-		
-		if lot.keys().size() > 0:
-			var lots = Global.main.rialto.lots
-			index_f = lots[lot.role].find(lot)
-			lots[lot.role].remove(index_f)
+		print(index, "-----",   Global.main.souls.size())
+		if lots.size() > 0:
+			var lots_ = Global.main.rialto.lots
+			
+			for lot in lots:
+				index_f = lots_[lot.role].find(lot)
+				lots_[lot.role].remove(index_f)
 
 	func time_flow(delta):
 		if duty_cycle.size() > 0:
@@ -424,7 +493,7 @@ class Soul:
 				what_should_i_do()
 				
 				if !stop:
-					if temp.task != "bidding":
+					if temp.task != "bidding" && index > 9:
 						print(index," soul ", temp.task, "  ", essence)
 					do_it()
 				
@@ -451,12 +520,6 @@ class Alternative:
 				predispose.pressure = 10
 				predisposes.append(predispose)
 			1:
-				name = "buy necessary"
-				predispose = {}
-				predispose.vocation = "artificer"
-				predispose.pressure = 1
-				predisposes.append(predispose)
-			2:
 				name = "sell booty"
 				predispose = {}
 				predispose.vocation = "getter"
@@ -464,13 +527,19 @@ class Alternative:
 				predisposes.append(predispose)
 				predispose = {}
 				predispose.vocation = "artificer"
-				predispose.pressure = 2
+				predispose.pressure = 1
 				predisposes.append(predispose)
-			3:
-				name = "invent recipe"
+			2:
+				name = "start inventing recipe"
 				predispose = {}
 				predispose.vocation = "artificer"
-				predispose.pressure = 2
+				predispose.pressure = 1
+				predisposes.append(predispose)
+			3:
+				name = "start making product"
+				predispose = {}
+				predispose.vocation = "artificer"
+				predispose.pressure = 10
 				predisposes.append(predispose)
 			-1:
 				name = "choose recipe"
@@ -498,21 +567,21 @@ class Calculation:
 			sum += verge
 		
 		for _j in sequence:
-			var index = sequence.find(_j)
+			var index_f = sequence.find(_j)
 			
 			match _j:
 				0: 
-					extract.alpha = verges_[index]
+					extract["alpha"] = verges_[index_f]
 				1: 
-					extract.beta = verges_[index]
+					extract["beta"] = verges_[index_f]
 				2: 
-					extract.gamma = verges_[index]
+					extract["gamma"] = verges_[index_f]
 
 	func set_hints(fails):
 		if fails.size() == 0:
 			best_hints()
 		else:
-			recipe = Global.main.recipes[fails[0].recipe]
+			recipe = fails[0].recipe
 			hints = set_coincided(recipe)
 
 	func set_coincided(_recipe):
@@ -587,7 +656,7 @@ class Calculation:
 			Global.rng.randomize()
 			var index_r = Global.rng.randi_range(0, options.size()-1)
 			hints = coincideds[options[index_r]]
-			recipe = hints.recipe
+			recipe = Global.main.recipes[hints.recipe]
 
 	func categorize_all(fails):
 		var sequence_options = []
@@ -676,7 +745,7 @@ class Calculation:
 		var index_r = Global.rng.randi_range(0, combination_options.size()-1)
 		var combination = combination_options[index_r]
 		set_extract(combination.sequence, combination.verges)
-		recipe = Global.main.recipes[fails[0].recipe]
+		recipe = fails[0].recipe
 
 	func swap_sequence(guess_):
 		var sequence_flag = [true,true,true]

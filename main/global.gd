@@ -6,6 +6,7 @@ var maze
 var rng = RandomNumberGenerator.new()
 var stamina_expense = {}
 var primary_key = {}
+var booty_list = {}
 
 func init_stamina_expense():
 	stamina_expense.routine = -2
@@ -25,12 +26,20 @@ func init_primary_key():
 	primary_key.crossroad = 0
 	primary_key.coast = 0
 	primary_key.cluster = 0
+	primary_key.booty = 0
+
+func init_booty():
+	booty_list = {}
+	booty_list["herb breed 0"] = ["extract"]
+	booty_list["herb breed 1"] = ["extract"]
+	booty_list["herb breed 2"] = ["extract"]
 
 func _ready():
 	main = get_node("/root/main")
 	maze = get_node("/root/main/maze")
 	init_stamina_expense()
 	init_primary_key()
+	init_booty()
 
 func triangle_check(verges, l):
 	var flag = l > verges[0] + verges[1] + verges[2]
@@ -50,24 +59,24 @@ class Tile:
 	var index
 	var landscape = {}
 
-	func set_(_landscape):
-		type = _landscape.type
-		index = _landscape.index
+	func set_(landscape_):
+		index = landscape_.index
+		type = landscape_.type
 		
 		match type:
 			"meadow":
-				init_seeds(_landscape.breed)
+				init_seeds(landscape_.breed)
 				burst_into_blossom()
 
-	func init_seeds(_breed):
+	func init_seeds(breed_):
 		landscape.grade = 1
-		landscape.n = 10
+		landscape.n = 12
 		landscape.current_herb = 0 
 		landscape.total_herb = landscape.n*3
 		landscape.seeds = []
 		landscape.available = []
 		landscape.sourdough = false
-		landscape.breed = _breed
+		landscape.breed = breed_
 		
 		for _i in landscape.n:
 			landscape.seeds.append([])
@@ -83,7 +92,7 @@ class Tile:
 		while landscape.current_herb < landscape.total_herb:
 			sprout(landscape.grade)
 
-	func sprout(_grade):
+	func sprout(grade_):
 		Global.rng.randomize()
 		var _i = Global.rng.randi_range(0, landscape.n-1)
 		var _j = Global.rng.randi_range(0, landscape.n-1)
@@ -98,8 +107,8 @@ class Tile:
 			if _j == landscape.n:
 				_j = 0
 		
-		landscape.seeds[_i][_j] = _grade
-		landscape.current_herb += pow(_grade, 2)
+		landscape.seeds[_i][_j] = grade_
+		landscape.current_herb += pow(grade_, 2)
 
 	func pluck(_i,_j):
 		landscape.current_herb -= pow(landscape.seeds[_i][_j], 2)

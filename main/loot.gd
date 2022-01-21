@@ -18,21 +18,36 @@ class Item:
 			
 			if index_f != -1:
 				owner.bag.item_indexs.remove(index_f)
-			
+		
+		if owner != null:	
+			print(index, " old owner ", owner.index, " new owner ", new_owner.index)
 		owner = new_owner
 		owner.bag.item_indexs.append(index)
 	
 	func destroy():
+		print(index, " DESTROY ", owner.index)
 		var index_f = Global.main.items.find(self)
 		
 		if index_f != -1:
 			Global.main.items.remove(index_f)
 		
+		print(owner.bag.item_indexs.size())
 		if owner != null:
 			index_f = owner.bag.item_indexs.find(index)
 			
+			print(" @ ", index_f)
 			if index_f != -1:
 				owner.bag.item_indexs.remove(index_f)
+		print(owner.bag.item_indexs.size())
+
+	func open():
+		print(1,features)
+		if features.what == "loot orb":
+			print(2,features)# owner.
+			var booty = Loot.Booty.new()
+			booty.set_(self)
+			destroy()
+
 
 class Fibonacci:
 	var n = 10
@@ -145,8 +160,39 @@ class Recipe:
 			
 			match _j:
 				0: 
-					extract.alpha = verges_[index_f]
+					extract["alpha"] = verges_[index_f]
 				1: 
-					extract.beta = verges_[index_f]
+					extract["beta"] = verges_[index_f]
 				2: 
-					extract.gamma = verges_[index_f]
+					extract["gamma"] = verges_[index_f]
+
+class Booty:
+	var index
+	var where
+	var grade
+	var loss
+	
+	func set_(item_):
+		index = Global.primary_key.booty
+		where = item_.features.where
+		grade = item_.features.grade
+		loss = item_.features.loss
+		Global.primary_key.booty += 1
+	
+	func roll(owner):
+		var options =  Global.booty_list[where]
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, options.size()-1)
+		
+		match options[index_r]:
+			"extract":
+				var extract = 10 * pow(grade, 2)
+				
+				match where:
+					"herb breed 0":
+						owner.extract["alpha"] += extract
+					"herb breed 1":
+						owner.extract["beta"] += extract
+					"herb breed 2":
+						owner.extract["gamma"] += extract
+		

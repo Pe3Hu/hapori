@@ -18,7 +18,7 @@ config/icon="res://assets/icon.png"
 
 Global="*res://main/global.gd"
 Member="*res://main/member.gd"
-Rialto="*res://main/rialto.gd"
+Bourse="*res://main/bourse.gd"
 Maze="*res://main/maze.gd"
 Loot="*res://main/loot.gd"
 
@@ -26,6 +26,10 @@ Loot="*res://main/loot.gd"
 
 window/size/width=1600
 window/size/height=200
+
+[network]
+
+limits/debugger_stdout/max_chars_per_second=8048
 
 [physics]
 

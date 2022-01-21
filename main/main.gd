@@ -43,7 +43,7 @@ func init_map():
 
 func init_fibonacci_rialto():
 	fibonacci = Loot.Fibonacci.new()
-	rialto = Rialto.Rialto.new()
+	rialto = Bourse.Rialto.new()
 
 func init_alternatives():
 	var indexs = 4
@@ -112,11 +112,11 @@ func init_recipes():
 		Global.primary_key.recipe += 1
 
 func init_souls():
-	var n = 3
+	#var n = 3
 	souls = []
 	var vocations = {
-		"getter": 0,
-		"artificer": 1
+		"getter": 10,
+		"artificer": 8
 	}
 	
 	for vocation in vocations.keys():
@@ -144,3 +144,15 @@ func _process(delta):
 			soul.time_flow(delta)
 			
 		rialto.time_flow(delta)
+
+func get_item_by_index(index_):
+	var item = null
+	
+	for item_ in items:
+		if item_.index == index_:
+			print(index_, ">",item_.index)
+			item = item_
+	
+	if item == null:
+		print("error get_item_by_index ", index_)
+	return item
