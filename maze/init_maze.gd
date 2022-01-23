@@ -42,21 +42,19 @@ var coasts = []
 var clusters = []
 
 var a = 31
-var tile_size = 64  # tile size (in pixels)
 var width = a  # width of map (in tiles)
 var height = a # height of map (in tiles)
 var zoom = 2
-var half
+var center
 
 # get a reference to the map for convenience
-onready var map = $tileMap
+onready var map = $map
 
 func _ready():
-	$camera2D.zoom = Vector2(zoom, zoom)
-	$camera2D.position = map.map_to_world(Vector2(width/2*1.25, height/2*1.35))
+	$camera.zoom = Vector2(zoom, zoom)
+	$camera.position = map.map_to_world(Vector2(width/2*1.25, height/2*1.35))
 	
-	half = ceil(height / 2)
-	tile_size = map.cell_size
+	center = ceil(height / 2)
 	
 	init_maze()
 	init_cells()
@@ -406,24 +404,24 @@ func init_clusters():
 		Global.primary_key.cluster += 1
 
 func build_center(unvisited):
-	map.set_cellv(Vector2(half, half), 0)
+	map.set_cellv(Vector2(center, center), 0)
 	var ways_ = [E,S,W,N]
 	
 	for _i in ways_.size():
-		var grid = Vector2(half, half)
+		var grid = Vector2(center, center)
 		var neighbor = neighbors[_i]
 		grid = grid + neighbor
 		map.set_cellv(grid, 15-ways_[(_i+1)%ways_.size()])
 		connect_cells(grid, neighbor)
 		
-		for _j in half-2:
+		for _j in center-2:
 			grid = grid + neighbor
 			connect_cells(grid, neighbor)
 			
 			if _j == step*2+1:
 				unvisited.append(grid)
 			
-		grid =  Vector2(half, half) + neighbor *2
+		grid =  Vector2(center, center) + neighbor *2
 		connect_cells(grid, neighbors[(_i+3)%ways_.size()])
 		grid = grid + neighbors[(_i+3)%ways_.size()]
 		connect_cells(grid, neighbors[(_i+3)%ways_.size()])
@@ -435,13 +433,13 @@ func build_center(unvisited):
 		connect_cells(grid, neighbors[(_i+1)%ways_.size()])
 		
 		for _j in 2:
-			grid = Vector2(half, half) + neighbor * 3
+			grid = Vector2(center, center) + neighbor * 3
 			
 			for _l in 3:
 				connect_cells(grid, neighbors[(_i+1+_j*2)%ways_.size()])
 				grid = grid + neighbors[(_i+1+_j*2)%ways_.size()]
 				
-		grid = Vector2(half, half)
+		grid = Vector2(center, center)
 		neighbor = neighbors[_i]
 		grid = grid + neighbor
 		remove_way(grid, ways_[(_i+3)%ways_.size()])
@@ -561,12 +559,12 @@ func make_highway(begin):
 
 func check_center(x_,y_):
 	var size = step
-	var x = ( x_ <= half + size && x_ >= half - size )
-	var y = ( y_ <= half + size && y_ >= half - size )
+	var x = ( x_ <= center + size && x_ >= center - size )
+	var y = ( y_ <= center + size && y_ >= center - size )
 	return x&&y
 
-func check_borders(cell_):
-	return cell_.x < 0 || cell_.x >= width || cell_.y < 0 || cell_.y >= height
+func check_borders(grid):
+	return grid.x < 0 || grid.x >= width || grid.y < 0 || grid.y >= height
 
 func check_neighbors(grid, unvisited):
 	# returns an array of cell's unvisited neighbors

@@ -27,6 +27,7 @@ func init_primary_key():
 	primary_key.coast = 0
 	primary_key.cluster = 0
 	primary_key.booty = 0
+	primary_key.sector = 0
 
 func init_booty():
 	booty_list = {}

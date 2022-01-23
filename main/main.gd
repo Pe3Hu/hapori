@@ -136,13 +136,13 @@ func _ready():
 	init_alternatives()
 	init_recipes()
 	init_souls()
-	ready = true
+	#ready = true
 	
 func _process(delta):
 	if ready:
 		for soul in souls:
 			soul.time_flow(delta)
-			
+		
 		rialto.time_flow(delta)
 
 func get_item_by_index(index_):

@@ -21,11 +21,11 @@ Member="*res://main/member.gd"
 Bourse="*res://main/bourse.gd"
 Maze="*res://main/maze.gd"
 Loot="*res://main/loot.gd"
+Reactor="*res://reactor/reactor.gd"
 
 [display]
 
 window/size/width=1600
-window/size/height=200
 
 [network]
 
