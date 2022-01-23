@@ -13,3 +13,4 @@ centered_textures = true
 format = 1
 
 [node name="camera" type="Camera2D" parent="."]
+current = true

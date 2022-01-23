@@ -1,7 +1,9 @@
 extends Node2D
 
 onready var map = $map
+
 var a :int = 9
+var size = 64
 var width  = a  # width of map (in tiles)
 var height = a # height of map (in tiles)
 var center
@@ -28,7 +30,7 @@ var colors = [0,1,2,3]
 
 func _ready():
 	center = ceil(height / 2)
-	
+	$camera.position = map.map_to_world(Vector2(center,center))
 	init_sectors()
 	
 func init_sectors():
