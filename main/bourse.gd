@@ -1,7 +1,6 @@
 extends Node
 
 
-
 class Rialto:
 	var prices = {
 		"loot orb": {

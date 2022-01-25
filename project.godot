@@ -11,7 +11,7 @@ config_version=4
 [application]
 
 config/name="Hapori"
-run/main_scene="res://arena/arena.tscn"
+run/main_scene="res://battleground/battleground.tscn"
 config/icon="res://assets/icon.png"
 
 [autoload]
@@ -22,11 +22,12 @@ Bourse="*res://main/bourse.gd"
 Maze="*res://main/maze.gd"
 Loot="*res://main/loot.gd"
 Reactor="*res://reactor/reactor.gd"
-Arena="*res://main/arena.gd"
+Battleground="*res://main/battleground.gd"
 
 [display]
 
 window/size/width=1600
+window/size/height=261
 
 [network]
 
