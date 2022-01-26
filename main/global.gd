@@ -9,6 +9,8 @@ var primary_key = {}
 var booty_list = {}
 var SDIW = {}
 var dangers = []
+var ability_help = {}
+var abilitys = []
 
 func init_stamina_expense():
 	stamina_expense.routine = -2
@@ -166,6 +168,15 @@ func init_sdiw():
 func init_dangers():
 	dangers = ["weak","middle","strong"]
 
+func init_ability_help():
+	ability_help.abbreviation = ["A","B","C","D","E","F","G","H","I","J","L","M","O","P","Q","R","S","T","V","W","Y"]
+	ability_help.list = {
+		"Whereby": ["Jab","Incision","Crush","Wave","Explosion"],
+		"Wherewith": ["Glide","Parry","Block","Let","Teleport","Yoke"],
+		"How": ["Distinct","Volley","Queue","Aim","Flow"],
+		"What": ["Rune","Seal","Hex","Observance","Massif"]
+		}
+		
 func _ready():
 	main = get_node("/root/main")
 	maze = get_node("/root/main/maze")
@@ -174,6 +185,7 @@ func _ready():
 	init_booty()
 	init_sdiw()
 	init_dangers()
+	init_ability_help()
 
 func triangle_check(verges, l):
 	var flag = l > verges[0] + verges[1] + verges[2]

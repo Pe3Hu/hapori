@@ -224,6 +224,7 @@ class Contestant:
 	var targets = []
 	var threats = []
 	var rules = {}
+	var ability = []
 	
 	func _init():
 		Global.rng.randomize()
@@ -357,6 +358,33 @@ class Hassle:
 			var index_f = contestants.find(initiative["index"])
 			
 			if index_f != -1:
-				
 				print(initiative["index"], arena.contestants[initiative["index"]].targets)
 
+class Ability:
+	var name
+	var type
+	var effect 
+
+class Mechanism:
+	var modules
+
+class Module:
+	var type 
+	
+	func _init():
+		var type
+		
+		match type:
+			"Generator":
+				return
+			"Engine":
+				return
+			"Sensor":
+				return
+			"Disguise":
+				return
+			"AI":
+				return
+			"Manipulator":
+				return
+	
