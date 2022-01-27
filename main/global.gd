@@ -1,8 +1,10 @@
 extends Node
 
 
+var root
 var main
 var maze
+var battleground
 var rng = RandomNumberGenerator.new()
 var stamina_expense = {}
 var primary_key = {}
@@ -11,6 +13,7 @@ var SDIW = {}
 var dangers = []
 var ability_help = {}
 var abilitys = []
+var tempers = []
 
 func init_stamina_expense():
 	stamina_expense.routine = -2
@@ -32,7 +35,8 @@ func init_primary_key():
 	primary_key.cluster = 0
 	primary_key.booty = 0
 	primary_key.sector = 0
-	primary_key.contestant  = 0
+	primary_key.contestant = 0
+	primary_key.ability = 0
 
 func init_booty():
 	booty_list = {}
@@ -166,20 +170,250 @@ func init_sdiw():
 		}
 
 func init_dangers():
-	dangers = ["weak","middle","strong"]
+	dangers = ["Weak","Middle","Strong"]
+	tempers = {
+		"Coward": {
+			"Attack": 1,
+			"Defense": 5-5
+			},
+		"Cynic": {
+			"Attack": 3,
+			"Defense": 3-3
+			},
+		"Lionheart": {
+			"Attack": 5,
+			"Defense": 1-1
+			}
+		}
 
 func init_ability_help():
 	ability_help.abbreviation = ["A","B","C","D","E","F","G","H","I","J","L","M","O","P","Q","R","S","T","V","W","Y"]
 	ability_help.list = {
-		"Whereby": ["Jab","Incision","Crush","Wave","Explosion"],
-		"Wherewith": ["Glide","Parry","Block","Let","Teleport","Yoke"],
-		"How": ["Distinct","Volley","Queue","Aim","Flow"],
-		"What": ["Rune","Seal","Hex","Observance","Massif"]
+		"Whereby": ["Jab","Incision","Crush","Wave","Explosion"],#Укол Разрез Раcкол Волна Взрыв 
+		"Wherewith": ["Glide","Parry","Block","Let","Teleport","Yoke"],#Скольжение Парирование Блок Барьер Блинк Захват
+		"How": ["Distinct","Volley","Queue","Aim","Flow"],#Одиночный Самонаведение Луч Залп Очередь
+		"What": ["Rune","Seal","Hex","Observance","Massif"]#Руна Печать Заклинание Ритуал Массив
 		}
+	ability_help.time = {
+		"J": {
+			"min": 1,
+			"max": 2
+			},
+		"I": {
+			"min": 2,
+			"max": 4
+			},
+		"С": {
+			"min": 3,
+			"max": 6
+			},
+		"W": {
+			"min": 4,
+			"max": 8
+			},
+		"E": {
+			"min": 5,
+			"max": 10
+			},
+		"D": {
+			"min": 1,
+			"max": 1
+			},
+		"A": {
+			"min": 3,
+			"max": 4
+			},
+		"F": {
+			"min": 4,
+			"max": 5
+			},
+		"V": {
+			"min": 5,
+			"max": 7
+			},
+		"Q": {
+			"min": 5,
+			"max": 7
+			},
+		"G": {
+			"min": 1,
+			"max": 1
+			},
+		"P": {
+			"min": 2,
+			"max": 3
+			},
+		"B": {
+			"min": 3,
+			"max": 5
+			},
+		"L": {
+			"min": 5,
+			"max": 8
+			},
+		"T": {
+			"min": 6,
+			"max": 7
+			},
+		"Y": {
+			"min": 4,
+			"max": 6
+			},
+		"R": {
+			"min": 1,
+			"max": 3
+			},
+		"S": {
+			"min": 2,
+			"max": 6
+			},
+		"H": {
+			"min": 4,
+			"max": 12
+			},
+		"O": {
+			"min": 8,
+			"max": 24
+			},
+		"M": {
+			"min": 16,
+			"max": 48
+			}
+		}
+	ability_help.cargo = {
+		"J": {
+			"min": 1,
+			"max": 3
+			},
+		"I": {
+			"min": 2,
+			"max": 4
+			},
+		"С": {
+			"min": 3,
+			"max": 5
+			},
+		"W": {
+			"min": 5,
+			"max": 7
+			},
+		"E": {
+			"min": 4,
+			"max": 6
+			},
+		"D": {
+			"min": 1,
+			"max": 1
+			},
+		"A": {
+			"min": 2,
+			"max": 10
+			},
+		"F": {
+			"min": 3,
+			"max": 10
+			},
+		"V": {
+			"min": 5,
+			"max": 10
+			},
+		"Q": {
+			"min": 5,
+			"max": 10
+			},
+		"G": {
+			"min": 1,
+			"max": 10
+			},
+		"P": {
+			"min": 1,
+			"max": 10
+			},
+		"B": {
+			"min": 1,
+			"max": 10
+			},
+		"L": {
+			"min": 1,
+			"max": 10
+			},
+		"T": {
+			"min": 1,
+			"max": 10
+			},
+		"Y": {
+			"min": 1,
+			"max": 10
+			},
+		"R": {
+			"min": 1,
+			"max": 2
+			},
+		"S": {
+			"min": 2,
+			"max": 4
+			},
+		"H": {
+			"min": 3,
+			"max": 6
+			},
+		"O": {
+			"min": 4,
+			"max": 8
+			},
+		"M": {
+			"min": 5,
+			"max": 10
+			}
+		}
+	
+	ability_help.actions = ["Attack","Defense"]
+	ability_help.basic_abilitys = {}
+	
+	for action in ability_help.actions:
+		ability_help.basic_abilitys[action] = []
+		var wherebys = []
+		var wherewiths = []
 		
+		match action:
+			"Attack":
+				wherebys = ["Jab","Incision","Crush"]
+			"Defense":
+				wherewiths = ["Glide","Block"]
+	
+		for whereby in wherebys:
+			var obj = {
+				"Index": Global.primary_key.ability,
+				"Name": "Basic "+whereby,
+				"Action": action,
+				"Whereby": whereby,
+				"How": "Distinct",
+				"What": "Hex"
+			}
+			var ability = Battleground.Ability.new(obj)
+			abilitys.append(ability)
+			ability_help.basic_abilitys[action].append(Global.primary_key.ability)
+			Global.primary_key.ability += 1
+	
+		for wherewith in wherewiths:
+			var obj = {
+				"Index": Global.primary_key.ability,
+				"Name": "Basic "+wherewith,
+				"Action": action,
+				"Wherewith": wherewith,
+				"What": "Hex"
+			}
+			var ability = Battleground.Ability.new(obj)
+			abilitys.append(ability)
+			ability_help.basic_abilitys[action].append(Global.primary_key.ability)
+			Global.primary_key.ability += 1
+
 func _ready():
+	root = get_node("/root")
 	main = get_node("/root/main")
 	maze = get_node("/root/main/maze")
+	battleground = root.get_node("battleground")
+	
 	init_stamina_expense()
 	init_primary_key()
 	init_booty()

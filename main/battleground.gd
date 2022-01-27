@@ -114,58 +114,57 @@ class Arena:
 	var index
 	var boundary
 	var contestants = []
-	var initiatives = []
 	var dangers = []
 	var hassles = []
-	var alives = []
 	var dropouts = []
 	var rules = {}
 	var altercations = {}
+	var timeline = {}
+	var time = 0
 	
 	func fight():
 		rules.initiative = "max"
 		prepare_fight()
 
 	func prepare_fight():
-		for _i in contestants.size():
-			alives.append(_i)
-		
 		set_dangers()
 		set_initiatives()
-		set_targets()
-		init_hassles()
+		du_hast()
+		print(timeline)
 
 	func set_dangers():
 		dangers = []
-		
-		for alive in alives:
+		var i = Global.battleground
+		for contestant in contestants:
 			dangers.append({
-				"value": contestants[alive].sdiw.stats.sum,
-				"index": alive
+				"value": Global.battleground.contestants[contestant].sdiw.stats.sum,
+				"index": contestant
 			})
 		
 		dangers.sort_custom(Global.Sorter, "sort")
 		print("DANGER: ",dangers)
+		
+		for danger in dangers:
+			if danger["value"] == dangers[0]["value"] || danger["value"] == dangers[dangers.size()-1]["value"]:
+				Global.battleground.contestants[danger["index"]].assailable = true
+			else:
+				Global.battleground.contestants[danger["index"]].assailable = false
 
 	func set_initiatives():
-		initiatives = []
+		var max_initiative = -1
 		
-		for alive in alives:
-			initiatives.append({
-				"value": contestants[alive].get_initiative(),
-				"index": alive
-			})
+		for contestant in contestants:
+			var initiative = Global.battleground.contestants[contestant].get_initiative()
 			
-		initiatives.sort_custom(Global.Sorter, "unsort")
-		print("INITIATIVES: ",initiatives)
-
-	func set_targets():
-		for initiative in initiatives:
-			contestants[initiative["index"]].pick_target()
+			if max_initiative < initiative:
+				max_initiative = initiative
 		
-		for alive in alives:
-			for target in contestants[alive].targets:
-				contestants[target].threats.append(alive)
+		for contestant in contestants:
+			var initiative = Global.battleground.contestants[contestant].get_initiative()
+			
+			var time_ = max_initiative - initiative
+			add_to_timeline(time_, contestant)
+		print("timeline: ",timeline)
 
 	func init_hassles():
 		hassles = []
@@ -173,16 +172,16 @@ class Arena:
 		
 		var index_altercation = 0
 		
-		for alive in alives:
-			if !altercations.keys().has(alive):
+		for contestant in contestants:
+			if !altercations.keys().has(contestant):
 				var childs = []
-				var parents = [alive]
+				var parents = [contestant]
 				var flag = true
 				var counter = 0
 				
 				while parents.size() > 0 && counter < 10:
 					for _i in range(parents.size()-1,-1,-1):
-						var parent = contestants[parents[_i]]
+						var parent = Global.battleground.contestants[parents[_i]]
 						
 						for target in parent.targets:
 							if !childs.has(target) && !parents.has(target):
@@ -216,6 +215,36 @@ class Arena:
 		for hassle in hassles:
 			hassle.start()
 
+	func du_hast():
+		var unfrozens = timeline[0]
+		
+		for unfrozen in unfrozens:
+			Global.battleground.contestants[unfrozen].adopt_decision()
+			
+		timeline.erase(0)
+		skip_time()
+
+	func skip_time():
+		var time_skip = 9999
+		
+		for time_ in timeline.keys():
+			if time_ < time_skip:
+				time_skip = time_
+				
+		var new_time_line = {}
+		
+		for old_time in timeline.keys():
+			var new_time = old_time - time_skip
+			new_time_line[new_time] = timeline[old_time]
+		
+		timeline = new_time_line
+		time += time_skip
+
+	func add_to_timeline(time_, contestant_):
+		if !timeline.keys().has(time_):
+			timeline[time_] = []
+		timeline[time_].append(contestant_)
+			
 class Contestant:
 	var index
 	var sdiw
@@ -224,14 +253,29 @@ class Contestant:
 	var targets = []
 	var threats = []
 	var rules = {}
-	var ability = []
-	
+	var abilitys = {}
+	var in_action = false
+	var temper
+	var assailable = false 
+	var decision = {}
+
 	func _init():
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, Global.dangers.size()-1)
 		rules.danger = Global.dangers[index_r]
+		Global.rng.randomize()
+		index_r = Global.rng.randi_range(0, Global.tempers.keys().size()-1)
+		temper = Global.tempers.keys()[index_r]
 		sdiw = Battleground.SDIW.new(self)
-	
+		get_basic_abilitys()
+
+	func get_basic_abilitys():
+		for action in Global.ability_help.actions:
+			abilitys[action] = []
+			Global.rng.randomize()
+			var index_r = Global.rng.randi_range(0, Global.ability_help.basic_abilitys[action].size()-1)
+			abilitys[action].append(Global.ability_help.basic_abilitys[action][index_r])
+
 	func get_initiative():
 		var initiative = -1
 		var initiatives = []
@@ -251,7 +295,7 @@ class Contestant:
 			initiative = initiatives.pop_back()
 		
 		return initiative["value"]
-	
+
 	func pick_target():
 		var target_count = 1
 		targets  = []
@@ -266,15 +310,15 @@ class Contestant:
 			var target_ = null
 			
 			match rules.danger:
-					"weak":
+					"Weak":
 						for _j in dangers_.size():
 							if dangers_[_j]["value"] == dangers_[0]["value"]:
 								options.append(dangers_[_j])
-					"middle":
+					"Middle":
 						for _j in dangers_.size():
 							if dangers_[_j]["value"] != dangers_[0]["value"] && dangers_[_j]["value"] != dangers_[dangers_.size()-1]["value"]:
 								options.append(dangers_[_j])
-					"strong":
+					"Strong":
 						for _j in dangers_.size():
 							if dangers_[_j]["value"] == dangers_[dangers_.size()-1]["value"]:
 								options.append(dangers_[_j])
@@ -286,6 +330,68 @@ class Contestant:
 			else:
 				print("@error")
 
+	func adopt_decision():
+		var actions = []
+		var scale = 2
+		
+		for action in Global.tempers[temper].keys():
+			var amount = Global.tempers[temper][action]
+			
+			if assailable && action == "Defense":
+				amount *= scale
+				
+			if !assailable && action == "Attack":
+				amount *= scale
+			
+			for _i in amount:
+				actions.append(action)
+				
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, actions.size()-1)
+		decision.action = actions[index_r]
+		
+		follow_decision()
+	
+	func follow_decision():
+		print(decision.action)
+		match decision.action:
+			"Defense":
+				return
+			"Attack":
+				pick_target()
+				select_attack()
+		
+				for target in targets:
+					Global.battleground.contestants[target].threats.append(index)
+	
+	func select_attack():
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, abilitys[decision.action].size()-1)
+		decision.attack = abilitys[decision.action][index_r]
+		var ability = Global.abilitys[decision.attack]
+		print("&",Global.abilitys[decision.attack].obj)
+		
+		Global.rng.randomize()
+		var cargo = {}
+		cargo.min = 0
+		cargo.max = 0
+		var time = {}
+		time.min = 0
+		time.max = 0
+		
+		for key in ability.obj:
+			var capital = key[0]
+			cargo.min += Global.ability_help.cargo[capital].min
+			cargo.max += Global.ability_help.cargo[capital].max
+			time.min += Global.ability_help.time[capital].min
+			time.max += Global.ability_help.time[capital].max
+			
+			
+		Global.rng.randomize()
+		time.roll = Global.rng.randi_range(time.min, time.max)
+		arena.add_to_timeline(time.roll, index)
+		print("$",time, cargo)
+	
 class SDIW:
 	var data = []
 	var stats = {}
@@ -332,7 +438,7 @@ class SDIW:
 		data[index_] += inc
 
 	func generate():
-		var points_cap_ = 100
+		var points_cap_ = 250
 		var points = 0
 		
 		for key in Global.SDIW.data_keys.keys():
@@ -358,13 +464,32 @@ class Hassle:
 			var index_f = contestants.find(initiative["index"])
 			
 			if index_f != -1:
-				print(initiative["index"], arena.contestants[initiative["index"]].targets)
+				print(initiative["index"], arena.Global.battleground.contestants[initiative["index"]].targets)
 
 class Ability:
-	var name
-	var type
-	var effect 
-
+	var index 
+	var name 
+	var action
+	var obj = {}
+	
+	func _init(obj_):
+		index = obj_["Index"]
+		name = obj_["Name"]
+		action = obj_["Action"]
+		
+		match action:
+			"Defense":
+				obj = {
+					"Wherewith": obj_["Wherewith"],
+					"What": obj_["What"]
+				}
+			"Attack":
+				obj = {
+					"Whereby": obj_["Whereby"],
+					"How": obj_["How"],
+					"What": obj_["What"]
+				}
+			
 class Mechanism:
 	var modules
 
@@ -388,3 +513,8 @@ class Module:
 			"Manipulator":
 				return
 	
+class Behaviour:
+	var index
+
+class Strategy:
+	var index

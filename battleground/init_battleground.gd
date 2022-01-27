@@ -71,7 +71,7 @@ func init_arenas():
 
 func spread_contestants():
 	for contestant in contestants:
-		arenas[0].contestants.append(contestant)
+		arenas[0].contestants.append(contestant.index)
 		contestant.arena = arenas[0]
 
 func first_fight():
