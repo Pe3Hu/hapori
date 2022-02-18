@@ -14,6 +14,7 @@ var dangers = []
 var ability_help = {}
 var abilitys = []
 var tempers = []
+var modules = []
 
 func init_stamina_expense():
 	stamina_expense.routine = -2
@@ -138,7 +139,7 @@ func init_sdiw():
 				"Will": "intuition"
 			}
 		}
-	SDIW.data_keys = {
+	SDIW.data_indexs = {
 		"vitality": 0, #живучесть
 		"plasticity": 1, #гибкость
 		"erudition": 2, #эрудиция
@@ -168,6 +169,12 @@ func init_sdiw():
 		"prescience": 26, #предвидение
 		"intuition": 27 #интуиция
 		}
+	SDIW.data_keys = [
+		"vitality","plasticity","erudition","mood","fastness","elasticity","integrity",
+		"sangfroid","overheat","immediacy","invention","fervor","palingenesy","massage",
+		"meditation","mantra","savvy","advertence","observancy","prophecy","diversion",
+		"postiche","disinformation","bluff","instinct","reflex","prescience","intuition"
+		]
 
 func init_dangers():
 	dangers = ["Weak","Middle","Strong"]
@@ -408,6 +415,9 @@ func init_ability_help():
 			ability_help.basic_abilitys[action].append(Global.primary_key.ability)
 			Global.primary_key.ability += 1
 
+func init_modules():
+	modules = ["Generator","Engine","Sensor","Disguise","AI","Gun","Protection"]
+
 func _ready():
 	root = get_node("/root")
 	main = get_node("/root/main")
@@ -420,6 +430,7 @@ func _ready():
 	init_sdiw()
 	init_dangers()
 	init_ability_help()
+	init_modules()
 
 func triangle_check(verges, l):
 	var flag = l > verges[0] + verges[1] + verges[2]
@@ -433,6 +444,27 @@ func triangle_check(verges, l):
 			flag = flag && verges[2] + verges[0] > verges[1]
 	
 	return flag
+
+func short_key_by_stat(stat_):
+	for short_key in SDIW.short_keys:
+		for long_key in SDIW.long_keys:
+			if SDIW.list[short_key][long_key] == stat_:
+				return short_key
+
+func long_key_by_stat(stat_):
+	for short_key in SDIW.short_keys:
+		for long_key in SDIW.long_keys:
+			if SDIW.list[short_key][long_key] == stat_:
+				return long_key
+
+func update_stat(owner_,stat_, value_):
+	var index_ = Global.SDIW.data_indexs[stat_]
+	var l_key = Global.long_key_by_stat(stat_)
+	owner_.stats.long_keys[l_key] += value_
+	var s_key = Global.short_key_by_stat(stat_)
+	owner_.stats.short_keys[s_key] += value_
+	owner_.stats.sqrts[index_] += value_
+	owner_.stats.sum += value_
 
 class Tile: 
 	var type

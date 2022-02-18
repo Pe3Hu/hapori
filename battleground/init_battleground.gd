@@ -31,6 +31,7 @@ func _ready():
 #		print(l,sdiw.stats.long_keys[l])
 	
 	init_arenas()
+	init_contestants()
 	spread_contestants()
 	first_fight()
 
@@ -45,6 +46,10 @@ func init_arenas():
 		var arena = Battleground.Arena.new()
 		arena.boundary = boundary
 		arenas.append(arena)
+
+func init_contestants():
+	var w = width/arenas_count
+	var h = height
 	
 	for _i in contestant_count:
 		Global.rng.randomize()
@@ -55,9 +60,7 @@ func init_arenas():
 		var y = Global.rng.randi_range(1, h-1) + boundarys[b].y
 		var p = Battleground.Point.new(x, y)
 		
-		var contestant = Battleground.Contestant.new()
-		contestant.point = p
-		contestant.index = Global.primary_key.contestant
+		var contestant = Battleground.Contestant.new(Global.primary_key.contestant, p)
 		contestants.append(contestant)
 		
 		Global.primary_key.contestant += 1

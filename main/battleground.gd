@@ -122,6 +122,7 @@ class Arena:
 	var timeline = {}
 	var time = 0
 	var size = 0
+	var winner_modules = []
 	
 	func fight():
 		size = contestants.size()
@@ -139,7 +140,7 @@ class Arena:
 		dangers = []
 		
 		for contestant in contestants:
-			var value = float(Global.battleground.contestants[contestant].sdiw.stats.sum)
+			var value = float(Global.battleground.contestants[contestant].stats.sum)
 			value *= float( size + Global.battleground.contestants[contestant].reward - 1 ) / float(size)
 			
 			dangers.append({
@@ -222,7 +223,7 @@ class Arena:
 			hassle.start()
 
 	func du_hast():
-		var unfrozens = timeline[0]
+		var unfrozens = timeline[0.0]
 		
 		for unfrozen in unfrozens:
 			Global.battleground.contestants[unfrozen].adopt_decision()
@@ -258,9 +259,11 @@ class Arena:
 	
 	func calc_reward():
 		var winner = Global.battleground.contestants[contestants[0]]
-		
-		print(winner.kicks)
-		print(winner.reward)
+		print("winner kicks: ",winner.kicks)
+		print("winner reward: ",winner.reward)
+		print("winner modules: ")
+		for winner_module in winner_modules:
+			print(winner_module.stats.sqrts)
 	
 class Contestant:
 	var index
@@ -277,8 +280,13 @@ class Contestant:
 	var decision = {}
 	var kicks = []
 	var reward = 1
+	var mechanism
+	var stats = {}
 
-	func _init():
+	func _init(index_, point_):
+		index = index_
+		point = point_
+		
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, Global.dangers.size()-1)
 		rules.danger = Global.dangers[index_r]
@@ -286,6 +294,9 @@ class Contestant:
 		index_r = Global.rng.randi_range(0, Global.tempers.keys().size()-1)
 		temper = Global.tempers.keys()[index_r]
 		sdiw = Battleground.SDIW.new(self)
+		mechanism = Battleground.Mechanism.new(self)
+		
+		update_all_stats()
 		get_basic_abilitys()
 
 	func get_basic_abilitys():
@@ -301,10 +312,10 @@ class Contestant:
 		
 		for key_s in Global.SDIW.list["reaction"]:
 			var key = Global.SDIW.list["reaction"][key_s]
-			var index_k = Global.SDIW.data_keys[key]
+			var index_k = Global.SDIW.data_indexs[key]
 			
 			initiatives.append({
-				"value": sdiw.data[index_k],
+				"value": stats.sqrts[index_k],
 				"key": key
 			}) 
 			
@@ -461,11 +472,31 @@ class Contestant:
 
 	func scalp(target_):
 		reward += Global.battleground.contestants[target_].reward
+		var module = Global.battleground.contestants[target_].mechanism.get_best_module()
+		arena.winner_modules.append(module)
+
+	func update_all_stats():
+		stats = {}
+		stats.short_keys = {}
+		stats.long_keys = {}
+		stats.sqrts = []
+		stats.sum = mechanism.stats.sum + sdiw.stats.sum
+		
+		for _i in sdiw.stats.sqrts.size():
+			var value = mechanism.stats.sqrts[_i]+sdiw.stats.sqrts[_i]
+			stats.sqrts.append(value)
+			
+		for l_key in sdiw.stats.long_keys:
+			stats.long_keys[l_key] = mechanism.stats.long_keys[l_key] + sdiw.stats.long_keys[l_key]
+		for s_key in sdiw.stats.short_keys:
+			stats.short_keys[s_key] = mechanism.stats.short_keys[s_key] + sdiw.stats.short_keys[s_key]
+			
+		print(index,stats)
 
 class SDIW:
+	var owner
 	var data = []
 	var stats = {}
-	var owner
 
 	func _init(owner_):
 		owner = owner_
@@ -475,14 +506,28 @@ class SDIW:
 		stats.sum = 0
 		
 		generate()
+		set_stats()
 
-	func init_stats():
+	func generate():
+		var points_limit = 128
+		
+		for key in Global.SDIW.data_indexs.keys():
+			data.append(1)
+			stats.sqrts.append(1)
+			points_limit -= 1
+		
+		for _i in points_limit:
+			Global.rng.randomize()
+			var index_r = Global.rng.randi_range(0, data.size()-1)
+			data[index_r] += 1
+
+	func set_stats():
 		stats.sum = 0
 		
 		for s in Global.SDIW.short_keys:
 			for l in Global.SDIW.long_keys:
 				var d = Global.SDIW.list[s][l]
-				var index_ = Global.SDIW.data_keys[d]
+				var index_ = Global.SDIW.data_indexs[d]
 				var value = floor(sqrt(data[index_]))
 				stats.sqrts[index_] = value
 				stats.sum += value
@@ -497,8 +542,8 @@ class SDIW:
 				else:
 					stats.long_keys[l] += value
 
-	func update_stat(key, inc):
-		var index_ = Global.SDIW.data_keys[key]
+	func up_stat(key, inc):
+		var index_ = Global.SDIW.data_indexs[key]
 		var old = floor(sqrt(data[index_]))
 		var new = floor(sqrt(data[index_]+inc))
 	
@@ -507,35 +552,18 @@ class SDIW:
 		
 		data[index_] += inc
 
-	func generate():
-		var points_cap_ = 250
-		var points = 0
-		
-		for key in Global.SDIW.data_keys.keys():
-			data.append(1)
-			stats.sqrts.append(1)
-			points += 1
-		
-		while points < points_cap_:
-			Global.rng.randomize()
-			var index__r = Global.rng.randi_range(0, data.size()-1)
-			data[index__r] += 1
-			points += 1
-		
-		init_stats()
-
 class Hassle:
 	var arena
 	var contestants = []
 	
 	func start():
-		pass
 #		print(contestants)
 #		for initiative in arena.initiatives:
 #			var index_f = contestants.find(initiative["index"])
 #
 #			if index_f != -1:
 #				print(initiative["index"], arena.Global.battleground.contestants[initiative["index"]].targets)
+		pass
 
 class Ability:
 	var index 
@@ -561,31 +589,134 @@ class Ability:
 					"What": obj_["What"]
 				}
 
-class Mechanism:
-	var modules
-
-class Module:
-	var type 
-	
-	func _init():
-		var type
-		
-		match type:
-			"Generator":
-				return
-			"Engine":
-				return
-			"Sensor":
-				return
-			"Disguise":
-				return
-			"AI":
-				return
-			"Manipulator":
-				return
-
 class Behaviour:
 	var index
 
 class Strategy:
 	var index
+
+class Mechanism:
+	var owner
+	var modules = []
+	var stats = {}
+
+	func _init(owner_):
+		owner = owner_
+		stats.short_keys = {}
+		stats.long_keys = {}
+		stats.sqrts = []
+		stats.sum = 0
+		
+		init_stats()
+		generate()
+
+	func init_stats():
+		stats.sum = 0
+		
+		for key in Global.SDIW.data_indexs.keys():
+			stats.sqrts.append(0)
+		
+		for s in Global.SDIW.short_keys:
+			stats.short_keys[s] = 0
+		for l in Global.SDIW.long_keys:
+			stats.long_keys[l] = 0
+
+	func generate():
+		var points_limit = 49
+		var objs = []
+		var arr = Global.modules
+		
+		for type in Global.modules:
+			var obj = {}
+			obj.owner = self
+			obj.type = type
+			obj.limit = 4
+			obj.prioritys = {}
+			
+			for key in Global.SDIW.short_keys:
+				obj.prioritys[key] = 1
+			
+			objs.append(obj)
+			points_limit -= obj.limit
+		
+		for _i in points_limit:
+			Global.rng.randomize()
+			var index_r = Global.rng.randi_range(0, objs.size()-1)
+			objs[index_r].limit += 1
+		
+		for obj in objs:
+			var module = Battleground.Module.new(obj)
+			modules.append(module)
+
+	func get_best_module():
+		var best_modules = [modules[0]]
+		
+		for _i in range (1,modules.size()):
+			var module = modules[_i]
+			
+			if best_modules[0].stats.sum == module.stats.sum:
+				best_modules.append(module)
+			
+			if best_modules[0].stats.sum < module.stats.sum:
+				best_modules = [module]
+		
+		Global.rng.randomize()
+		var index_r = Global.rng.randi_range(0, best_modules.size()-1)
+		var result = best_modules.pop_at(index_r)
+		return result
+
+class Module:
+	var owner
+	var type 
+	var key
+	var stats = {}
+	
+	func _init(obj_):
+		owner = obj_.owner
+		type = obj_.type
+		stats.sqrts = {}
+		stats.sum = 0
+		
+		match type:
+			#Источник энергии
+			"Generator":
+				key = "replenishment"
+			#Маневренность
+			"Engine":
+				key = "reaction"
+			#Обнаружение
+			"Sensor":
+				key = "outside"
+			#Маскировка
+			"Disguise":
+				key = "inside"
+			#Модуль поведения
+			"AI":
+				key = "capacity"
+			#Орудие
+			"Gun":
+				key = "tension"
+			#Системы защиты
+			"Protection":
+				key = "resistance"
+			"Manipulator":
+				pass
+		
+		var options = []
+		
+		for priority in obj_.prioritys.keys():
+			var key_ = Global.SDIW.list[key][priority]
+			stats.sqrts[key_] = 0
+			
+			for _i in obj_.prioritys[priority]:
+				options.append(key_)
+		
+		for _i in obj_.limit:
+			Global.rng.randomize()
+			var index_r = Global.rng.randi_range(0, options.size()-1)
+			stats.sqrts[options[index_r]] += 1
+		
+		for stat in stats.sqrts.keys():
+			var value = stats.sqrts[stat]
+			Global.update_stat(owner,stat,value)
+			stats.sum += value
