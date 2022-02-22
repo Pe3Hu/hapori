@@ -11,17 +11,17 @@ config_version=4
 [application]
 
 config/name="Hapori"
-run/main_scene="res://battleground/battleground.tscn"
+run/main_scene="res://main/main.tscn"
 config/icon="res://assets/icon.png"
 
 [autoload]
 
-Global="*res://main/global.gd"
 Member="*res://main/member.gd"
 Bourse="*res://main/bourse.gd"
 Maze="*res://main/maze.gd"
 Loot="*res://main/loot.gd"
 Reactor="*res://reactor/reactor.gd"
+Global="*res://main/global.gd"
 Battleground="*res://main/battleground.gd"
 
 [display]

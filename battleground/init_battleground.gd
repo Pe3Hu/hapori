@@ -6,11 +6,8 @@ var height = ProjectSettings.get_setting("display/window/size/height")
 var texture
 var qtree
 
-var contestant_count = 10
-var arenas_count = 1
-var boundarys = []
-var contestants = []
-var arenas = []
+var contestant_counter = 10
+var arena_counter = 1
 
 func _ready():
 	$camera.position = Vector2(width/2, height/2)
@@ -36,53 +33,56 @@ func _ready():
 	first_fight()
 
 func init_arenas():
-	var w = width/arenas_count
+	var w = width/arena_counter
 	var h = height
 	
-	for _i in arenas_count:
+	for _i in arena_counter:
 		var boundary = Battleground.Rectangle.new(_i*w, 0, w, h)
 		boundary.index = _i
-		boundarys.append(boundary)
+		Global.array.boundarys.append(boundary)
 		var arena = Battleground.Arena.new()
 		arena.boundary = boundary
-		arenas.append(arena)
+		Global.array.arenas.append(arena)
 
 func init_contestants():
-	var w = width/arenas_count
+	var w = width/arena_counter
 	var h = height
 	
-	for _i in contestant_count:
+	for _i in contestant_counter:
 		Global.rng.randomize()
-		var b = Global.rng.randi_range(0, boundarys.size()-1)
+		var b = Global.rng.randi_range(0, Global.array.boundarys.size()-1)
 		Global.rng.randomize()
-		var x = Global.rng.randi_range(1, w-1) + boundarys[b].x
+		var x = Global.rng.randi_range(1, w-1) + Global.array.boundarys[b].x
 		Global.rng.randomize()
-		var y = Global.rng.randi_range(1, h-1) + boundarys[b].y
+		var y = Global.rng.randi_range(1, h-1) + Global.array.boundarys[b].y
 		var p = Battleground.Point.new(x, y)
 		
-		var contestant = Battleground.Contestant.new(Global.primary_key.contestant, p)
-		contestants.append(contestant)
+		var contestant = Battleground.Contestant.new(Global.list.primary_key.contestant, p)
+		Global.array.contestants.append(contestant)
 		
-		Global.primary_key.contestant += 1
-		
-		boundarys[b].points.append(contestant.point)
+		Global.array.boundarys[b].points.append(contestant.point)
 		
 		var s = Sprite.new()
+		s.name = String(Global.list.primary_key.contestant)
 		s.texture = texture
 		s.offset = Vector2(x,y)
-		add_child(s)
+		$sprites.add_child(s)
+		
+		Global.list.primary_key.contestant += 1
 
 func spread_contestants():
-	for contestant in contestants:
-		arenas[0].contestants.append(contestant.index)
-		contestant.arena = arenas[0]
+	for contestant in Global.array.contestants:
+		var team_name = String(contestant.index)
+		Global.array.arenas[0].new_team(team_name, contestant.index)
+		contestant.team = team_name
+		contestant.arena = Global.array.arenas[0]
 
 func first_fight():
-	arenas[0].fight()
+	Global.array.arenas[0].fight()
 
 func _draw():
-	for boundary in boundarys:
-		var hue = float(boundary.index)/boundarys.size()
+	for boundary in Global.array.boundarys:
+		var hue = float(boundary.index)/Global.array.boundarys.size()
 		var color = Color.from_hsv(0.35,1,0.51) 
 		var rect = Rect2(Vector2(boundary.x,boundary.y),Vector2(boundary.w,boundary.h))
 		draw_rect(rect,color)

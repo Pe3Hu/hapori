@@ -1,54 +1,44 @@
 extends Node
 
 
-var root
-var main
-var maze
-var battleground
 var rng = RandomNumberGenerator.new()
-var stamina_expense = {}
-var primary_key = {}
-var booty_list = {}
-var SDIW = {}
-var dangers = []
-var ability_help = {}
-var abilitys = []
-var tempers = []
-var modules = []
+var array = {}
+var list = {}
+var node = {}
+var object = {}
+var flag = {}
 
 func init_stamina_expense():
-	stamina_expense.routine = -2
-	stamina_expense.trip = -8
-	stamina_expense.espial = -32
-	stamina_expense.in_stasis = 0
-	stamina_expense.after_stasis = -16
-	stamina_expense.rest = 64
+	list.stamina_expense = {}
+	list.stamina_expense.routine = -2
+	list.stamina_expense.trip = -8
+	list.stamina_expense.espial = -32
+	list.stamina_expense.in_stasis = 0
+	list.stamina_expense.after_stasis = -16
+	list.stamina_expense.rest = 64
 
 func init_primary_key():
-	primary_key.item = 0
-	primary_key.lot = 0
-	primary_key.soul = 0
-	primary_key.recipe = 0
-	primary_key.road = 0
-	primary_key.highway = 0
-	primary_key.crossroad = 0
-	primary_key.coast = 0
-	primary_key.cluster = 0
-	primary_key.booty = 0
-	primary_key.sector = 0
-	primary_key.contestant = 0
-	primary_key.ability = 0
-
-func init_booty():
-	booty_list = {}
-	booty_list["herb breed 0"] = ["extract"]
-	booty_list["herb breed 1"] = ["extract"]
-	booty_list["herb breed 2"] = ["extract"]
+	list.primary_key = {}
+	list.primary_key.item = 0
+	list.primary_key.lot = 0
+	list.primary_key.soul = 0
+	list.primary_key.recipe = 0
+	list.primary_key.road = 0
+	list.primary_key.highway = 0
+	list.primary_key.crossroad = 0
+	list.primary_key.coast = 0
+	list.primary_key.cluster = 0
+	list.primary_key.booty = 0
+	list.primary_key.sector = 0
+	list.primary_key.contestant = 0
+	list.primary_key.ability = 0
+	list.primary_key.module = 0
 
 func init_sdiw():
-	SDIW.short_keys = ["Strength","Dexterity","Intellect","Will"]
-	SDIW.long_keys = ["capacity","replenishment","resistance","tension","outside","inside","reaction"]
-	SDIW.list = {
+	list.SDIW = {}
+	list.SDIW.short_keys = ["Strength","Dexterity","Intellect","Will"]
+	list.SDIW.long_keys = ["capacity","replenishment","resistance","tension","outside","inside","reaction"]
+	list.SDIW.list = {
 		"Strength": #Сила
 			{
 				"capacity": "vitality",
@@ -139,7 +129,7 @@ func init_sdiw():
 				"Will": "intuition"
 			}
 		}
-	SDIW.data_indexs = {
+	list.SDIW.data_indexs = {
 		"vitality": 0, #живучесть
 		"plasticity": 1, #гибкость
 		"erudition": 2, #эрудиция
@@ -169,39 +159,25 @@ func init_sdiw():
 		"prescience": 26, #предвидение
 		"intuition": 27 #интуиция
 		}
-	SDIW.data_keys = [
+	list.SDIW.data_keys = [
 		"vitality","plasticity","erudition","mood","fastness","elasticity","integrity",
 		"sangfroid","overheat","immediacy","invention","fervor","palingenesy","massage",
 		"meditation","mantra","savvy","advertence","observancy","prophecy","diversion",
 		"postiche","disinformation","bluff","instinct","reflex","prescience","intuition"
 		]
-
-func init_dangers():
-	dangers = ["Weak","Middle","Strong"]
-	tempers = {
-		"Coward": {
-			"Attack": 1,
-			"Defense": 5-5
-			},
-		"Cynic": {
-			"Attack": 3,
-			"Defense": 3-3
-			},
-		"Lionheart": {
-			"Attack": 5,
-			"Defense": 1-1
-			}
-		}
+	list.SDIW.primes = 3
+	list.SDIW.wingmans = 4
 
 func init_ability_help():
-	ability_help.abbreviation = ["A","B","C","D","E","F","G","H","I","J","L","M","O","P","Q","R","S","T","V","W","Y"]
-	ability_help.list = {
+	list.ability_help = {}
+	list.ability_help.abbreviation = ["A","B","C","D","E","F","G","H","I","J","L","M","O","P","Q","R","S","T","V","W","Y"]
+	list.ability_help.list = {
 		"Whereby": ["Jab","Incision","Crush","Wave","Explosion"],#Укол Разрез Раcкол Волна Взрыв 
 		"Wherewith": ["Glide","Parry","Block","Let","Teleport","Yoke"],#Скольжение Парирование Блок Барьер Блинк Захват
 		"How": ["Distinct","Volley","Queue","Aim","Flow"],#Одиночный Самонаведение Луч Залп Очередь
 		"What": ["Rune","Seal","Hex","Observance","Massif"]#Руна Печать Заклинание Ритуал Массив
 		}
-	ability_help.time = {
+	list.ability_help.time = {
 		"J": {
 			"min": 1,
 			"max": 2
@@ -287,7 +263,7 @@ func init_ability_help():
 			"max": 48
 			}
 		}
-	ability_help.cargo = {
+	list.ability_help.cargo = {
 		"J": {
 			"min": 1,
 			"max": 3
@@ -374,11 +350,11 @@ func init_ability_help():
 			}
 		}
 	
-	ability_help.actions = ["Attack","Defense"]
-	ability_help.basic_abilitys = {}
+	list.ability_help.actions = ["Attack","Defense"]
+	list.ability_help.basic_abilitys = {}
 	
-	for action in ability_help.actions:
-		ability_help.basic_abilitys[action] = []
+	for action in list.ability_help.actions:
+		list.ability_help.basic_abilitys[action] = []
 		var wherebys = []
 		var wherewiths = []
 		
@@ -390,7 +366,7 @@ func init_ability_help():
 	
 		for whereby in wherebys:
 			var obj = {
-				"Index": Global.primary_key.ability,
+				"Index": Global.list.primary_key.ability,
 				"Name": "Basic "+whereby,
 				"Action": action,
 				"Whereby": whereby,
@@ -398,39 +374,102 @@ func init_ability_help():
 				"What": "Hex"
 			}
 			var ability = Battleground.Ability.new(obj)
-			abilitys.append(ability)
-			ability_help.basic_abilitys[action].append(Global.primary_key.ability)
-			Global.primary_key.ability += 1
+			array.abilitys.append(ability)
+			list.ability_help.basic_abilitys[action].append(Global.list.primary_key.ability)
+			Global.list.primary_key.ability += 1
 	
 		for wherewith in wherewiths:
 			var obj = {
-				"Index": Global.primary_key.ability,
+				"Index": Global.list.primary_key.ability,
 				"Name": "Basic "+wherewith,
 				"Action": action,
 				"Wherewith": wherewith,
 				"What": "Hex"
 			}
 			var ability = Battleground.Ability.new(obj)
-			abilitys.append(ability)
-			ability_help.basic_abilitys[action].append(Global.primary_key.ability)
-			Global.primary_key.ability += 1
+			array.abilitys.append(ability)
+			list.ability_help.basic_abilitys[action].append(Global.list.primary_key.ability)
+			Global.list.primary_key.ability += 1
 
-func init_modules():
-	modules = ["Generator","Engine","Sensor","Disguise","AI","Gun","Protection"]
+func init_array():
+	array.abilitys = []
+	array.modules = []
+	array.danger_types = ["Weak","Middle","Strong"]
+	array.module_types = ["Generator","Engine","Sensor","Disguise","AI","Gun","Protection"]
+	array.souls = []
+	array.alternatives = []
+	array.items = []
+	array.lots = []
+	array.sequences = []
+	array.verges = []
+	array.recipes = []
+	array.boundarys = []
+	array.contestants = []
+	array.arenas = []
 
-func _ready():
-	root = get_node("/root")
-	main = get_node("/root/main")
-	maze = get_node("/root/main/maze")
-	battleground = root.get_node("battleground")
-	
+func init_node():
+	#usless
+	node.root = get_node("/root")
+	node.main = get_node("/root/main")
+	node.maze = get_node("/root/main/maze")
+	node.battleground = get_node("/root/main/battleground")
+
+func init_list():
 	init_stamina_expense()
 	init_primary_key()
-	init_booty()
-	init_sdiw()
-	init_dangers()
 	init_ability_help()
-	init_modules()
+	init_sdiw()
+	
+	list.booty_list = {}
+	list.booty_list = {
+		"herb breed 0": "extract",
+		"herb breed 1": "extract",
+		"herb breed 2": "extract"
+	}
+	list.temper_types = {}
+	list.temper_types = {
+		"Coward": {
+			"Attack": 1,
+			"Defense": 5-5
+			},
+		"Cynic": {
+			"Attack": 3,
+			"Defense": 3-3
+			},
+		"Lionheart": {
+			"Attack": 5,
+			"Defense": 1-1
+			}
+		}
+
+func init_object():
+	object.fibonacci = Loot.Fibonacci.new()
+	object.rialto = Bourse.Rialto.new()
+
+func init_flag():
+	flag.ready = false
+
+func _ready():
+	init_node()
+	init_array()
+	init_list()
+	init_object()
+	init_flag()
+
+func get_index_in_array(array_, index_):
+	var child = null
+	
+	for child_ in array_:
+		if child_.index == index_:
+			#print(index_, "<find child>",child_.index)
+			child = child_
+	
+	if child == null:
+		var errors = []
+		for obj in array_:
+			errors.append(obj.index)
+		print("error index ", index_, errors)
+	return child
 
 func triangle_check(verges, l):
 	var flag = l > verges[0] + verges[1] + verges[2]
@@ -446,19 +485,19 @@ func triangle_check(verges, l):
 	return flag
 
 func short_key_by_stat(stat_):
-	for short_key in SDIW.short_keys:
-		for long_key in SDIW.long_keys:
-			if SDIW.list[short_key][long_key] == stat_:
+	for short_key in list.SDIW.short_keys:
+		for long_key in list.SDIW.long_keys:
+			if list.SDIW.list[short_key][long_key] == stat_:
 				return short_key
 
 func long_key_by_stat(stat_):
-	for short_key in SDIW.short_keys:
-		for long_key in SDIW.long_keys:
-			if SDIW.list[short_key][long_key] == stat_:
+	for short_key in list.SDIW.short_keys:
+		for long_key in list.SDIW.long_keys:
+			if list.SDIW.list[short_key][long_key] == stat_:
 				return long_key
 
 func update_stat(owner_,stat_, value_):
-	var index_ = Global.SDIW.data_indexs[stat_]
+	var index_ = Global.list.SDIW.data_indexs[stat_]
 	var l_key = Global.long_key_by_stat(stat_)
 	owner_.stats.long_keys[l_key] += value_
 	var s_key = Global.short_key_by_stat(stat_)

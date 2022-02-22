@@ -1,20 +1,8 @@
 extends Control
 
-var souls
-var rialto
-var fibonacci
-var alternatives
-var map 
-var items = []
-var lots = []
-var sequences = []
-var verges = []
-var recipes = []
-var ready = false
-
 func init_map():
-	map = {}
-	map.graph = {
+	Global.object.map = {}
+	Global.object.map.graph = {
 		"0": ["1","2","3","4","5","6"],
 		"1": ["0","2","6"],
 		"2": ["0","1","3"],
@@ -24,10 +12,10 @@ func init_map():
 		"6": ["0","1","5"]
 	}
 	
-	map.tiles = []
-	map.n = 7
+	Global.object.map.tiles = []
+	Global.object.map.n = 7
 	
-	for _i in map.n:
+	for _i in Global.object.map.n:
 		var tile = Global.Tile.new()
 		var obj = {}
 		obj.index = _i
@@ -39,20 +27,15 @@ func init_map():
 			obj.type = "city"
 		
 		tile.set_(obj)
-		map.tiles.append(tile)
-
-func init_fibonacci_rialto():
-	fibonacci = Loot.Fibonacci.new()
-	rialto = Bourse.Rialto.new()
+		Global.object.map.tiles.append(tile)
 
 func init_alternatives():
 	var indexs = 4
-	alternatives = []
 	
 	for _i in indexs:
 		var alternative = Member.Alternative.new()
 		alternative.set_index(_i)
-		alternatives.append(alternative)
+		Global.array.alternatives.append(alternative)
 
 func init_recipes():
 	var sequences_ = []
@@ -76,7 +59,7 @@ func init_recipes():
 		
 		i += 1
 	
-	sequences.append_array(sequences_[n-1])
+	Global.array.sequences.append_array(sequences_[n-1])
 	
 	var criterions = {}
 	criterions.n = 20
@@ -93,27 +76,26 @@ func init_recipes():
 				var verges_ = [a,b,c]
 				
 				if Global.triangle_check(verges_, criterions.limit.l):
-					verges.append(verges_)
+					Global.array.verges.append(verges_)
 	
-	verges.shuffle()
+	Global.array.verges.shuffle()
 	
 	for _i in criterions.limit.success:
 		Global.rng.randomize()
-		var index_r = Global.rng.randi_range(0, sequences.size()-1)
-		var sequence = sequences[index_r]
+		var index_r = Global.rng.randi_range(0, Global.array.sequences.size()-1)
+		var sequence = Global.array.sequences[index_r]
 		Global.rng.randomize()
-		index_r = Global.rng.randi_range(0, verges.size()-1)
-		var verges_ = verges[index_r]
+		index_r = Global.rng.randi_range(0, Global.array.verges.size()-1)
+		var verges_ = Global.array.verges[index_r]
 		
 		var recipe = Loot.Recipe.new()
 		recipe.set_extract(sequence, verges_)
-		recipe.index = Global.primary_key.recipe
-		recipes.append(recipe)
-		Global.primary_key.recipe += 1
+		recipe.index = Global.list.primary_key.recipe
+		Global.array.recipes.append(recipe)
+		Global.list.primary_key.recipe += 1
 
 func init_souls():
 	#var n = 3
-	souls = []
 	var vocations = {
 		"getter": 10,
 		"artificer": 8
@@ -124,35 +106,23 @@ func init_souls():
 			var soul = Member.Soul.new()
 			soul.vocations.append(vocation)  
 			var obj = {}
-			obj.index = Global.primary_key.soul
+			obj.index = Global.list.primary_key.soul
 			obj.parent = self
 			soul.init(obj)
-			souls.append(soul)
-			Global.primary_key.soul += 1
+			Global.array.souls.append(soul)
+			Global.list.primary_key.soul += 1
 
 func _ready():
 	init_map()
-	init_fibonacci_rialto()
 	init_alternatives()
 	init_recipes()
 	init_souls()
-	#ready = true
-	
+	Global.flag.ready = true
+
 func _process(delta):
-	if ready:
-		for soul in souls:
+	if Global.flag.ready:
+		for soul in Global.array.souls:
 			soul.time_flow(delta)
 		
-		rialto.time_flow(delta)
+		Global.object.rialto.time_flow(delta)
 
-func get_item_by_index(index_):
-	var item = null
-	
-	for item_ in items:
-		if item_.index == index_:
-			print(index_, ">",item_.index)
-			item = item_
-	
-	if item == null:
-		print("error get_item_by_index ", index_)
-	return item

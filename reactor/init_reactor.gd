@@ -39,7 +39,7 @@ func init_sectors():
 		
 		for y in height:
 			var sector = Reactor.Sector.new()
-			sector.index = Global.primary_key.sector
+			sector.index = Global.list.primary_key.sector
 			sector.parity = (x+y)%2
 			sector.grid = Vector2(x, y)
 			sector.edges = (sector.parity +1)*4
@@ -51,7 +51,7 @@ func init_sectors():
 				
 			sectors[x].append(sector)
 			
-			Global.primary_key.sector += 1
+			Global.list.primary_key.sector += 1
 	
 	for sectors_ in sectors:
 		for sector_ in sectors_:
@@ -144,7 +144,7 @@ func paint_sectors():
 			for option in options:
 				if option.ring == min_ring:
 					unpainted.append(option.index)
-			print(min_ring,"??",options.size(),">",unpainted.size())
+			#print(min_ring,"??",options.size(),">",unpainted.size())
 		
 		Global.rng.randomize()
 		index_r = Global.rng.randi_range(0, unpainted.size()-1)
@@ -161,15 +161,15 @@ func paint_sectors():
 			if index_f != -1:
 				free_colors.remove(index_f)
 		
-		print(counter,free_colors)
+		#print(counter,free_colors)
 		if free_colors.size() > 0:
 			Global.rng.randomize()
 			index_r = Global.rng.randi_range(0, free_colors.size()-1)
 			sector_.color = free_colors[index_r]
-			print(sector_.index," FILL ",free_colors[index_r] )
-			print(unpainted)
+			#print(sector_.index," FILL ",free_colors[index_r] )
+			#print(unpainted)
 		else:
-			print("color error")
+			print("reactor color error")
 	
 #	for sectors_ in sectors:
 #		for sector_ in sectors_:

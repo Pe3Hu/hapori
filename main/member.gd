@@ -85,7 +85,7 @@ class Soul:
 				options.append("buy necessary")
 			else:
 				if finish == null:
-					for alternative in Global.main.alternatives:
+					for alternative in Global.array.alternatives:
 						for predispose in alternative.predisposes:
 							if vocations.has(predispose.vocation):
 								var flag = true
@@ -211,17 +211,17 @@ class Soul:
 		var stasiss = ["bidding","clear finish"]
 
 		if routines.has(temp.task):
-			stamina.expense = Global.stamina_expense.routine
+			stamina.expense = Global.list.stamina_expense.routine
 
 		if trips.has(temp.task):
-			stamina.expense = Global.stamina_expense.trip
+			stamina.expense = Global.list.stamina_expense.trip
 
 		if stasiss.has(temp.task):
-			stamina.expense = Global.stamina_expense.in_stasis
+			stamina.expense = Global.list.stamina_expense.in_stasis
 		
 		match temp.task:
 			"prey espial":
-				stamina.expense = Global.stamina_expense.espial * temp.time_cost
+				stamina.expense = Global.list.stamina_expense.espial * temp.time_cost
 		
 		stamina.current -= stamina.expense
 		essence += stamina.expense * 1
@@ -238,7 +238,7 @@ class Soul:
 		value += stamina.total - stamina.current
 		value += pow(stamina.overheat, 2)
 		stamina.current = stamina.total
-		temp.time_cost = Global.stamina_expense.rest * value / stamina.total
+		temp.time_cost = Global.list.stamina_expense.rest * value / stamina.total
 		if outlay.flag:
 			outlay.previous = outlay.current
 			outlay.current = 0
@@ -249,18 +249,18 @@ class Soul:
 		
 		outlay.flag = true
 		Global.rng.randomize()
-		var index_r = Global.rng.randi_range(0, parent.rialto.sorted_prices.size()-1)
-		temp.best_prey = parent.rialto.sorted_prices[index_r]
+		var index_r = Global.rng.randi_range(0, Global.object.rialto.sorted_prices.size()-1)
+		temp.best_prey = Global.object.rialto.sorted_prices[index_r]
 
 	func find_best_wetland():
 		var tiles = []
 		
-		for tile in parent.map.tiles:
+		for tile in Global.object.map.tiles:
 			if tile.type == "meadow":
 				if tile.landscape.breed == temp.best_prey:
 					tiles.append(tile)
 		
-		var max_available = 0
+		var max_available = 1
 		var options = []
 		
 		for tile in tiles:
@@ -313,7 +313,7 @@ class Soul:
 					input.loss = ""
 					input.amount = 0
 					
-					Global.main.fibonacci.roll(input)
+					Global.object.fibonacci.roll(input)
 					item.features.loss.name = input.loss
 					item.features.loss.amount = input.amount
 					
@@ -339,7 +339,7 @@ class Soul:
 			var lot = Bourse.Lot.new()
 			lot.owner = self
 			lot.role = "sell"
-			lot.item = Global.main.get_item_by_index(index_)
+			lot.item = Global.get_index_in_array(Global.array.items,index_)
 			lot.what = lot.item.features.what
 			lot.where = lot.item.features.where
 			lot.components = []
@@ -354,7 +354,7 @@ class Soul:
 		temp.time_cost = 0.1
 		
 		for lot in lots:
-			Global.main.rialto.add_lot(lot)
+			Global.object.rialto.add_lot(lot)
 
 	func make_calculation():
 		temp.time_cost = 0.1
@@ -366,11 +366,11 @@ class Soul:
 
 	func generate_calculation():
 		Global.rng.randomize()
-		var index_r = Global.rng.randi_range(0, Global.main.sequences.size()-1)
-		var sequence = Global.main.sequences[index_r]
+		var index_r = Global.rng.randi_range(0, Global.array.sequences.size()-1)
+		var sequence = Global.array.sequences[index_r]
 		Global.rng.randomize()
-		index_r = Global.rng.randi_range(0, Global.main.verges.size()-1)
-		var verges = Global.main.verges[index_r]
+		index_r = Global.rng.randi_range(0, Global.array.verges.size()-1)
+		var verges = Global.array.verges[index_r]
 		
 		calculations.current = Member.Calculation.new()
 		calculations.current.set_extract(sequence, verges)
@@ -410,17 +410,19 @@ class Soul:
 				necessary.append(need)
 
 	func lay_waste_bag():
-		var i = Global.main.items
+		var i = Global.array.items
 		var b = bag.item_indexs
+		
 		for index_ in bag.item_indexs:
-			var item = Global.main.get_item_by_index(index_)
+			var item = Global.get_index_in_array(Global.array.items,index_)
+			print(index, " try open")
 			item.open()
 			
-		print(necessary)
+		#print(necessary)
 		for _i in range(necessary.size()-1,-1,-1):
 			if extract[necessary[_i].key] >= necessary[_i].min: 
 				necessary.remove(_i)
-		print(necessary)
+		#print(necessary)
 
 	func receive_necessary():
 		temp.time_cost = 0.1
@@ -477,11 +479,11 @@ class Soul:
 			extract[key] -= product.extract[key]
 
 	func die():
-		var index_f = Global.main.souls.find(self)
-		Global.main.souls.remove(index_f)
-		print(index, "-----",   Global.main.souls.size())
+		var index_f = Global.array.souls.find(self)
+		Global.array.souls.remove(index_f)
+		print(index, "-----",   Global.array.souls.size())
 		if lots.size() > 0:
-			var lots_ = Global.main.rialto.lots
+			var lots_ = Global.object.rialto.lots
 			
 			for lot in lots:
 				index_f = lots_[lot.role].find(lot)
@@ -493,12 +495,12 @@ class Soul:
 				what_should_i_do()
 				
 				if !stop:
-					if temp.task != "bidding" && index > 9:
-						print(index," soul ", temp.task, "  ", essence)
+#					if temp.task != "bidding" && index > 9:
+#						print(index," soul ", temp.task, "  ", essence)
 					do_it()
 				
 			if !bidding:
-				temp.time_cost -= delta
+				temp.time_cost -= delta*25
 			
 			if essence < 0:
 				die()
@@ -639,7 +641,7 @@ class Calculation:
 	func best_hints():
 		var coincideds = []
 		
-		for _recipe in Global.main.recipes:
+		for _recipe in Global.array.recipes:
 			if _recipe.sum == sum:
 				var coincided = set_coincided(_recipe)
 				coincideds.append(coincided)
@@ -656,12 +658,12 @@ class Calculation:
 			Global.rng.randomize()
 			var index_r = Global.rng.randi_range(0, options.size()-1)
 			hints = coincideds[options[index_r]]
-			recipe = Global.main.recipes[hints.recipe]
+			recipe = Global.array.recipes[hints.recipe]
 
 	func categorize_all(fails):
 		var sequence_options = []
 		
-		for sequence_ in Global.main.sequences:
+		for sequence_ in Global.array.sequences:
 			sequence_options.append(sequence_)
 		
 		var _i = sequence_options.size() - 1
@@ -695,7 +697,7 @@ class Calculation:
 		var verges_options = []
 		var sum_f = fails[0].sum
 		
-		for verges_ in Global.main.verges:
+		for verges_ in Global.array.verges:
 			var sum_ = 0
 			
 			for verge in verges_:

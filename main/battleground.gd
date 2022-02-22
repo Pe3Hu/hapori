@@ -123,6 +123,7 @@ class Arena:
 	var time = 0
 	var size = 0
 	var winner_modules = []
+	var teams = {}
 	
 	func fight():
 		size = contestants.size()
@@ -139,38 +140,44 @@ class Arena:
 	func set_dangers():
 		dangers = []
 		
-		for contestant in contestants:
-			var value = float(Global.battleground.contestants[contestant].stats.sum)
-			value *= float( size + Global.battleground.contestants[contestant].reward - 1 ) / float(size)
+		for index_c in contestants:
+			var contestant = Global.get_index_in_array(Global.array.contestants,index_c)
+			var value = float(contestant.stats.sum)
+			value *= float( size + contestant.reward - 1 ) / float(size)
 			
 			dangers.append({
 				"value": value,
-				"index": contestant
+				"index": index_c,
+				"team": contestant.team
 			})
 		
 		dangers.sort_custom(Global.Sorter, "sort")
 		print("DANGER: ",dangers)
 		
 		for danger in dangers:
+			var contestant = Global.get_index_in_array(Global.array.contestants,danger["index"])
+			
 			if danger["value"] == dangers[0]["value"] || danger["value"] == dangers[dangers.size()-1]["value"]:
-				Global.battleground.contestants[danger["index"]].assailable = true
+				contestant.assailable = true
 			else:
-				Global.battleground.contestants[danger["index"]].assailable = false
+				contestant.assailable = false
 
 	func set_initiatives():
 		var max_initiative = -1
 		
-		for contestant in contestants:
-			var initiative = Global.battleground.contestants[contestant].get_initiative()
+		for index_c in contestants:
+			var contestant = Global.get_index_in_array(Global.array.contestants,index_c)
+			var initiative = contestant.get_initiative()
 			
 			if max_initiative < initiative:
 				max_initiative = initiative
 		
-		for contestant in contestants:
-			var initiative = Global.battleground.contestants[contestant].get_initiative()
+		for index_c in contestants:
+			var contestant = Global.get_index_in_array(Global.array.contestants,index_c)
+			var initiative = contestant.get_initiative()
 			
-			var time_ = max_initiative - initiative
-			add_to_timeline(time_, contestant)
+			var time_ = float(max_initiative - initiative)
+			add_to_timeline(time_, index_c)
 		print("timeline: ",timeline)
 
 	func init_hassles():
@@ -188,7 +195,7 @@ class Arena:
 				
 				while parents.size() > 0 && counter < 10:
 					for _i in range(parents.size()-1,-1,-1):
-						var parent = Global.battleground.contestants[parents[_i]]
+						var parent = Global.get_index_in_array(Global.array.contestants,parents[_i])
 						
 						for target in parent.targets:
 							if !childs.has(target) && !parents.has(target):
@@ -223,12 +230,14 @@ class Arena:
 			hassle.start()
 
 	func du_hast():
-		var unfrozens = timeline[0.0]
+		var zero = float(0.0)
+		var unfrozens = timeline[zero]
 		
 		for unfrozen in unfrozens:
-			Global.battleground.contestants[unfrozen].adopt_decision()
 			
-		timeline.erase(0)
+			Global.get_index_in_array(Global.array.contestants,unfrozen).adopt_decision()
+			
+		timeline.erase(zero)
 		skip_time()
 
 	func skip_time():
@@ -241,7 +250,7 @@ class Arena:
 		var new_time_line = {}
 		
 		for old_time in timeline.keys():
-			var new_time = old_time - time_skip
+			var new_time = float(old_time - time_skip)
 			new_time_line[new_time] = timeline[old_time]
 		
 		timeline = new_time_line
@@ -251,20 +260,34 @@ class Arena:
 		if !timeline.keys().has(time_):
 			timeline[time_] = []
 		timeline[time_].append(contestant_)
-	
+
 	func calc_fight():
 		while contestants.size() > 1:
 			du_hast()
 			print("timeline: ",timeline)
-	
+
 	func calc_reward():
-		var winner = Global.battleground.contestants[contestants[0]]
+		var winner = Global.get_index_in_array(Global.array.contestants,contestants[0])
+		winner.trophies.append_array(winner_modules)
+		
 		print("winner kicks: ",winner.kicks)
 		print("winner reward: ",winner.reward)
 		print("winner modules: ")
-		for winner_module in winner_modules:
-			print(winner_module.stats.sqrts)
-	
+		
+		for trophie in winner.trophies:
+			var module = Global.get_index_in_array(Global.array.modules,trophie)
+			module.owner = winner.mechanism
+			print(module.stats)
+		winner.find_best_gear()
+
+	func new_team(team_name_,contestant_):
+		teams[team_name_] = [contestant_]
+		contestants.append(contestant_)
+
+	func add_to_team(team_name_,contestant_):
+		teams[team_name_].append(contestant_)
+		contestants.append(contestant_)
+
 class Contestant:
 	var index
 	var sdiw
@@ -282,37 +305,40 @@ class Contestant:
 	var reward = 1
 	var mechanism
 	var stats = {}
+	var team = ""
+	var trophies = []
 
 	func _init(index_, point_):
 		index = index_
 		point = point_
 		
 		Global.rng.randomize()
-		var index_r = Global.rng.randi_range(0, Global.dangers.size()-1)
-		rules.danger = Global.dangers[index_r]
+		var index_r = Global.rng.randi_range(0, Global.array.danger_types.size()-1)
+		rules.danger = Global.array.danger_types[index_r]
 		Global.rng.randomize()
-		index_r = Global.rng.randi_range(0, Global.tempers.keys().size()-1)
-		temper = Global.tempers.keys()[index_r]
+		index_r = Global.rng.randi_range(0, Global.list.temper_types.keys().size()-1)
+		temper = Global.list.temper_types.keys()[index_r]
 		sdiw = Battleground.SDIW.new(self)
 		mechanism = Battleground.Mechanism.new(self)
 		
 		update_all_stats()
 		get_basic_abilitys()
+		detect_prime()
 
 	func get_basic_abilitys():
-		for action in Global.ability_help.actions:
+		for action in Global.list.ability_help.actions:
 			abilitys[action] = []
 			Global.rng.randomize()
-			var index_r = Global.rng.randi_range(0, Global.ability_help.basic_abilitys[action].size()-1)
-			abilitys[action].append(Global.ability_help.basic_abilitys[action][index_r])
+			var index_r = Global.rng.randi_range(0, Global.list.ability_help.basic_abilitys[action].size()-1)
+			abilitys[action].append(Global.list.ability_help.basic_abilitys[action][index_r])
 
 	func get_initiative():
 		var initiative = -1
 		var initiatives = []
 		
-		for key_s in Global.SDIW.list["reaction"]:
-			var key = Global.SDIW.list["reaction"][key_s]
-			var index_k = Global.SDIW.data_indexs[key]
+		for key_s in Global.list.SDIW.list["reaction"]:
+			var key = Global.list.SDIW.list["reaction"][key_s]
+			var index_k = Global.list.SDIW.data_indexs[key]
 			
 			initiatives.append({
 				"value": stats.sqrts[index_k],
@@ -332,7 +358,7 @@ class Contestant:
 		var dangers_ = []
 		
 		for danger in arena.dangers:
-			if danger["index"] != index:
+			if danger["team"] != team:
 				dangers_.append(danger)
 		
 		for _i in target_count:
@@ -370,8 +396,8 @@ class Contestant:
 			var actions = []
 			var scale = 2
 			
-			for action in Global.tempers[temper].keys():
-				var amount = Global.tempers[temper][action]
+			for action in Global.list.temper_types[temper].keys():
+				var amount = Global.list.temper_types[temper][action]
 				
 				if assailable && action == "Defense":
 					amount *= scale
@@ -400,7 +426,7 @@ class Contestant:
 						select_attack()
 				
 						for target in targets:
-							Global.battleground.contestants[target].threats.append(index)
+							Global.get_index_in_array(Global.array.contestants,target).threats.append(index)
 			"End":
 				complite_action()
 				
@@ -410,7 +436,7 @@ class Contestant:
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, abilitys[decision.action].size()-1)
 		decision.attack = abilitys[decision.action][index_r]
-		var ability = Global.abilitys[decision.attack]
+		var ability = Global.array.abilitys[decision.attack]
 		#print("&",Global.abilitys[decision.attack].obj)
 		
 		Global.rng.randomize()
@@ -423,10 +449,10 @@ class Contestant:
 		
 		for key in ability.obj:
 			var capital = key[0]
-			cargo.min += Global.ability_help.cargo[capital].min
-			cargo.max += Global.ability_help.cargo[capital].max
-			time.min += Global.ability_help.time[capital].min
-			time.max += Global.ability_help.time[capital].max
+			cargo.min += Global.list.ability_help.cargo[capital].min
+			cargo.max += Global.list.ability_help.cargo[capital].max
+			time.min += Global.list.ability_help.time[capital].min
+			time.max += Global.list.ability_help.time[capital].max
 			
 			
 		Global.rng.randomize()
@@ -446,14 +472,21 @@ class Contestant:
 			kicks.append(target_)
 			arena.contestants.erase(target_)
 			
-#			var index_f  = -1
-#
-#			for _i in arena.dangers.size():
-#				if arena.dangers[_i]["index"] == target_:
-#					index_f = _i
-#
-#			if index_f != -1:
-#				arena.dangers.remove(index_f)
+			var index_f = -1
+			var sprites = Global.node.root.get_node("main/battleground/sprites")
+			
+			for _i in sprites.get_children().size():
+				if sprites.get_children()[_i].name == String(target_):
+					index_f = _i
+
+			sprites.remove_child(sprites.get_children()[index_f])
+
+			for _i in arena.dangers.size():
+				if arena.dangers[_i]["index"] == target_:
+					index_f = _i
+
+			if index_f != -1:
+				arena.dangers.remove(index_f)
 			
 			arena.set_dangers()
 			
@@ -471,8 +504,9 @@ class Contestant:
 				decision.stage = "End"
 
 	func scalp(target_):
-		reward += Global.battleground.contestants[target_].reward
-		var module = Global.battleground.contestants[target_].mechanism.get_best_module()
+		var contestant = Global.get_index_in_array(Global.array.contestants,target_)
+		reward += contestant.reward
+		var module = contestant.mechanism.get_best_module()
 		arena.winner_modules.append(module)
 
 	func update_all_stats():
@@ -490,8 +524,68 @@ class Contestant:
 			stats.long_keys[l_key] = mechanism.stats.long_keys[l_key] + sdiw.stats.long_keys[l_key]
 		for s_key in sdiw.stats.short_keys:
 			stats.short_keys[s_key] = mechanism.stats.short_keys[s_key] + sdiw.stats.short_keys[s_key]
-			
-		print(index,stats)
+
+	func find_best_gear():
+		print(sdiw.stats)
+		print(mechanism.stats)
+		var modules = []
+		modules.append_array(mechanism.all_modules)
+		modules.append_array(trophies)
+		var prototype = Prototype.new(modules, self)
+		var type = "max"
+		prototype.estimator(type)
+		print("old: ",index,mechanism.stats)
+		mechanism.upgrade_by_prototype(prototype)
+		print("new: ",index,mechanism.stats)
+		
+#
+#		print("stats: ",index,stats)
+#		print("mech: ",mechanism.stats)
+#		print("sdiw: ",sdiw.stats)
+	
+	func detect_prime():
+		var _i = 0
+		var sorted = {}
+		var values = []
+		stats.primes = []
+		stats.wingmans = []
+		
+		for l_key in Global.list.SDIW.long_keys:
+			for s_key in Global.list.SDIW.short_keys:
+				var obj = {
+					"index": _i,
+					"stat": Global.list.SDIW.list[l_key][s_key],
+					"value": sdiw.stats.sqrts[_i]*sdiw.stats.long_keys[l_key]*sdiw.stats.short_keys[s_key]
+					}
+					
+				if !sorted.keys().has(obj["value"]):
+					sorted[obj["value"]] = [obj]
+				else:
+					sorted[obj["value"]].append(obj)
+				_i += 1
+		
+		var options = []
+		
+		while stats.primes.size() < Global.list.SDIW.primes || stats.wingmans.size() < Global.list.SDIW.wingmans:
+			if options.size() > 0:
+				Global.rng.randomize()
+				var index_r = Global.rng.randi_range(0, options.size()-1)
+				var stat = options[index_r]["stat"]
+				options.remove(index_r)
+				
+				if stats.primes.size() < Global.list.SDIW.primes:
+					stats.primes.append(stat)
+				else:
+					stats.wingmans.append(stat)
+			else:
+				var max_value = -1
+				
+				for key in sorted.keys():
+					if key > max_value:
+						max_value = key
+				
+				options.append_array(sorted[max_value])
+				sorted.erase(max_value)
 
 class SDIW:
 	var owner
@@ -511,7 +605,7 @@ class SDIW:
 	func generate():
 		var points_limit = 128
 		
-		for key in Global.SDIW.data_indexs.keys():
+		for key in Global.list.SDIW.data_indexs.keys():
 			data.append(1)
 			stats.sqrts.append(1)
 			points_limit -= 1
@@ -524,10 +618,10 @@ class SDIW:
 	func set_stats():
 		stats.sum = 0
 		
-		for s in Global.SDIW.short_keys:
-			for l in Global.SDIW.long_keys:
-				var d = Global.SDIW.list[s][l]
-				var index_ = Global.SDIW.data_indexs[d]
+		for s in Global.list.SDIW.short_keys:
+			for l in Global.list.SDIW.long_keys:
+				var d = Global.list.SDIW.list[s][l]
+				var index_ = Global.list.SDIW.data_indexs[d]
 				var value = floor(sqrt(data[index_]))
 				stats.sqrts[index_] = value
 				stats.sum += value
@@ -543,7 +637,7 @@ class SDIW:
 					stats.long_keys[l] += value
 
 	func up_stat(key, inc):
-		var index_ = Global.SDIW.data_indexs[key]
+		var index_ = Global.list.SDIW.data_indexs[key]
 		var old = floor(sqrt(data[index_]))
 		var new = floor(sqrt(data[index_]+inc))
 	
@@ -562,7 +656,7 @@ class Hassle:
 #			var index_f = contestants.find(initiative["index"])
 #
 #			if index_f != -1:
-#				print(initiative["index"], arena.Global.battleground.contestants[initiative["index"]].targets)
+#				print(initiative["index"], arena.Global.array.contestants[initiative["index"]].targets)
 		pass
 
 class Ability:
@@ -597,7 +691,8 @@ class Strategy:
 
 class Mechanism:
 	var owner
-	var modules = []
+	var all_modules = []
+	var modules = {}
 	var stats = {}
 
 	func _init(owner_):
@@ -612,28 +707,29 @@ class Mechanism:
 
 	func init_stats():
 		stats.sum = 0
+		stats.sqrts = []
 		
-		for key in Global.SDIW.data_indexs.keys():
+		for key in Global.list.SDIW.data_indexs.keys():
 			stats.sqrts.append(0)
 		
-		for s in Global.SDIW.short_keys:
+		for s in Global.list.SDIW.short_keys:
 			stats.short_keys[s] = 0
-		for l in Global.SDIW.long_keys:
+		for l in Global.list.SDIW.long_keys:
 			stats.long_keys[l] = 0
 
 	func generate():
 		var points_limit = 49
 		var objs = []
-		var arr = Global.modules
+		var arr = Global.array.module_types
 		
-		for type in Global.modules:
+		for type in Global.array.module_types:
 			var obj = {}
 			obj.owner = self
 			obj.type = type
 			obj.limit = 4
 			obj.prioritys = {}
 			
-			for key in Global.SDIW.short_keys:
+			for key in Global.list.SDIW.short_keys:
 				obj.prioritys[key] = 1
 			
 			objs.append(obj)
@@ -645,33 +741,63 @@ class Mechanism:
 			objs[index_r].limit += 1
 		
 		for obj in objs:
+			obj.index = Global.list.primary_key.module
 			var module = Battleground.Module.new(obj)
-			modules.append(module)
+			Global.array.modules.append(module)
+			all_modules.append(obj.index)
+			modules[obj.type] = [obj.index]
+			Global.list.primary_key.module += 1
 
 	func get_best_module():
-		var best_modules = [modules[0]]
+		var best_modules = [all_modules[0]]
 		
 		for _i in range (1,modules.size()):
-			var module = modules[_i]
+			var module = Global.get_index_in_array(Global.array.modules,all_modules[_i])
+			var module_zero = Global.get_index_in_array(Global.array.modules,best_modules[0])
 			
-			if best_modules[0].stats.sum == module.stats.sum:
-				best_modules.append(module)
+			if module_zero.stats.rating == module.stats.rating:
+				best_modules.append(module.index)
 			
-			if best_modules[0].stats.sum < module.stats.sum:
-				best_modules = [module]
+			if module_zero.stats.rating < module.stats.rating:
+				best_modules = [module.index]
 		
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, best_modules.size()-1)
 		var result = best_modules.pop_at(index_r)
+		all_modules.erase(result)
+		modules[Global.get_index_in_array(Global.array.modules,result).type].erase(result)
 		return result
 
+	func upgrade_by_prototype(prototype_):
+		init_stats()
+		
+		owner.trophies.append_array(all_modules)
+		all_modules = []
+		
+		for module_type in Global.array.module_types:
+			modules[module_type] = prototype_.optimums[module_type]
+			
+			for new in modules[module_type]:
+				var module = Global.get_index_in_array(Global.array.modules,new)
+				module.add_to_owner_stats()
+				
+				if owner.trophies.has(new):
+					owner.trophies.erase(new)
+					
+				all_modules.append(new)
+		
+		owner.update_all_stats()
+
 class Module:
+	var index
 	var owner
 	var type 
 	var key
 	var stats = {}
+	var rating = {}
 	
 	func _init(obj_):
+		index = obj_.index
 		owner = obj_.owner
 		type = obj_.type
 		stats.sqrts = {}
@@ -705,7 +831,7 @@ class Module:
 		var options = []
 		
 		for priority in obj_.prioritys.keys():
-			var key_ = Global.SDIW.list[key][priority]
+			var key_ = Global.list.SDIW.list[key][priority]
 			stats.sqrts[key_] = 0
 			
 			for _i in obj_.prioritys[priority]:
@@ -715,8 +841,76 @@ class Module:
 			Global.rng.randomize()
 			var index_r = Global.rng.randi_range(0, options.size()-1)
 			stats.sqrts[options[index_r]] += 1
-		
+			
+		add_to_owner_stats()
+
+	func add_to_owner_stats():
 		for stat in stats.sqrts.keys():
 			var value = stats.sqrts[stat]
 			Global.update_stat(owner,stat,value)
 			stats.sum += value
+			
+		calc_rating()
+
+	func calc_rating():
+		var rating = 0
+		
+		for stat in stats.sqrts.keys():
+			rating += pow(stats.sqrts[stat],2)
+		
+		stats.rating = sqrt(rating)
+
+class Prototype:
+	var owner
+	var modules = {}
+	var optimums = {}
+	var not_used = []
+	
+	func _init(modules_, owner_):
+		owner = owner_
+		
+		for key in Global.array.module_types:
+			modules[key] = []
+			
+		for module in modules_:
+			var type = Global.get_index_in_array(Global.array.modules,module).type
+			modules[type].append(module)
+	
+	func estimator(type_):
+		var used = []
+		
+		for key in modules.keys():
+			optimums[key] = []
+			var a = owner
+			var module_amount = owner.mechanism.modules[key].size()
+			
+			while module_amount > 0:
+				var options = []
+				
+				for index in modules[key]:
+					if !used.has(index):
+						options = [index]
+				
+				for index in modules[key]:
+					var module = Global.array.modules[index]
+					var module_zero = Global.array.modules[options[0]]
+					
+					match type_:
+						"max":
+							if module_zero.stats.sum < module.stats.sum:
+								options = [module.index]
+							if module_zero.stats.sum == module.stats.sum && module.index != module_zero.index:
+								options.append(module.index)
+				
+				while module_amount > 0 && options.size() > 0:
+					Global.rng.randomize()
+					var index_r = Global.rng.randi_range(0, options.size()-1)
+					optimums[key].append(options[index_r])
+					used.append(options[index_r])
+					options.remove(index_r)
+					module_amount -= 1
+			
+		for key in modules.keys():
+			for module in modules[key]:
+				if !used.has(module):
+					not_used.append(module)

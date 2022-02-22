@@ -142,8 +142,8 @@ func init_cells():
 			
 			if cell.neighbors.size() > 2:
 				crossroads.append(cell.index)
-				cell.crossroad = Global.primary_key.crossroad
-				Global.primary_key.crossroad += 1
+				cell.crossroad = Global.list.primary_key.crossroad
+				Global.list.primary_key.crossroad += 1
 
 func init_deadends():
 	for cell in cells:
@@ -151,7 +151,7 @@ func init_deadends():
 			deadends.append(cell.index)
 	
 	for deadend in deadends:
-		clearcoles.append(Global.primary_key.road)
+		clearcoles.append(Global.list.primary_key.road)
 		var road = [deadend]
 		var new_cell = cells[deadend].neighbors[0]
 		make_road(new_cell,road,"long")
@@ -159,14 +159,14 @@ func init_deadends():
 	for crossroad in crossroads:
 		for neighbor in cells[crossroad].neighbors:
 			if cells[neighbor].crossroad != -1:
-				asphalts.append(Global.primary_key.road)
+				asphalts.append(Global.list.primary_key.road)
 				var road = [crossroad,neighbor]
 				make_road(neighbor,road,"short")
 
 	for crossroad in crossroads:
 		for neighbor in cells[crossroad].neighbors:
 			if cells[neighbor].roads.size() == 0:
-				asphalts.append(Global.primary_key.road)
+				asphalts.append(Global.list.primary_key.road)
 				var road = [crossroad]
 				make_road(neighbor,road,"long")
 
@@ -338,16 +338,16 @@ func init_coasts():
 	for road_ in coast_cells.keys():
 		for _i in coast_cells[road_].size():
 			var coast = Maze.Coast.new()
-			coast.index = Global.primary_key.coast
+			coast.index = Global.list.primary_key.coast
 			coast.road = road_
 			coast.coast = _i
 			coast.cells.append_array(coast_cells[road_][_i])
 			
 			for cell_ in coast_cells[road_][_i]:
-				cells[cell_].coast = Global.primary_key.coast
+				cells[cell_].coast = Global.list.primary_key.coast
 				
 			coasts.append(coast)
-			Global.primary_key.coast += 1
+			Global.list.primary_key.coast += 1
 
 func init_clusters():
 	var clusters_ = []
@@ -397,11 +397,11 @@ func init_clusters():
 
 	for coasts_ in clusters_:
 		var cluster = Maze.Cluster.new()
-		cluster.index = Global.primary_key.cluster
+		cluster.index = Global.list.primary_key.cluster
 		cluster.coasts.append_array(coasts_) 
 
 		clusters.append(cluster)
-		Global.primary_key.cluster += 1
+		Global.list.primary_key.cluster += 1
 
 func build_center(unvisited):
 	map.set_cellv(Vector2(center, center), 0)
@@ -467,8 +467,8 @@ func make_road(begin,road,l):
 		roads.append(road)
 	
 		for cell_index in road:
-			cells[cell_index].roads.append(Global.primary_key.road)
-		Global.primary_key.road += 1
+			cells[cell_index].roads.append(Global.list.primary_key.road)
+		Global.list.primary_key.road += 1
 
 func set_unvisited_crossroad():
 	var unvisited = []
@@ -546,22 +546,22 @@ func make_highway(begin):
 					obj.cells.append_array(roads[road_r])
 	
 	for cell_index in obj.cells:
-		cells[cell_index].highways.append(Global.primary_key.highway)
+		cells[cell_index].highways.append(Global.list.primary_key.highway)
 	
 	var highway = Maze.Highway.new()
-	highway.index = Global.primary_key.highway
+	highway.index = Global.list.primary_key.highway
 	highway.roads = obj.highway
 	highway.crossroads = obj.crossroads
 	highway.cells = obj.cells
 	
 	highways.append(highway)
-	Global.primary_key.highway += 1
+	Global.list.primary_key.highway += 1
 
 func check_center(x_,y_):
 	var size = step
 	var x = ( x_ <= center + size && x_ >= center - size )
 	var y = ( y_ <= center + size && y_ >= center - size )
-	return x&&y
+	return x && y
 
 func check_borders(grid):
 	return grid.x < 0 || grid.x >= width || grid.y < 0 || grid.y >= height

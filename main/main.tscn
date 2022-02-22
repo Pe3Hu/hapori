@@ -13,9 +13,11 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="battleground" parent="." instance=ExtResource( 4 )]
+visible = false
+
 [node name="maze" parent="." instance=ExtResource( 2 )]
 visible = false
 
 [node name="reactor" parent="." instance=ExtResource( 3 )]
-
-[node name="battleground" parent="." instance=ExtResource( 4 )]
+visible = false

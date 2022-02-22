@@ -19,7 +19,7 @@ class Rialto:
 	var markets = []
 	
 	func add_lot(lot):
-		lot.index = Global.primary_key.lot
+		lot.index = Global.list.primary_key.lot
 		lot.price.deal = prices[lot.what][lot.where]*(1+lot.owner.greed.markup[lot.role]+lot.owner.greed.benchmark)
 		lot.price.min = prices[lot.what][lot.where]*(1+lot.owner.greed.markup[lot.role]+lot.owner.greed.min)
 		lot.price.max = prices[lot.what][lot.where]*(1+lot.owner.greed.markup[lot.role]+lot.owner.greed.max)
@@ -29,7 +29,7 @@ class Rialto:
 		markets[index].requirements_check()
 		
 		lots[lot.role].append(lot)
-		Global.primary_key.lot += 1
+		Global.list.primary_key.lot += 1
 	
 	func findmarket_(lot):
 		var exist_flag = false

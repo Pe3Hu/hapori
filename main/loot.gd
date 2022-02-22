@@ -8,46 +8,38 @@ class Item:
 	var features = {}
 	
 	func add_to_all_items():
-		index = Global.primary_key.item
-		Global.primary_key.item += 1
-		Global.main.items.append(self)
+		index = Global.list.primary_key.item
+		Global.list.primary_key.item += 1
+		Global.array.items.append(self)
 	
 	func add_owner_bag(new_owner):
-		if owner != null:
-			var index_f = owner.bag.item_indexs.find(index)
+		if Global.get_index_in_array(Global.array.items,index) != null:
+			if owner != null:
+				owner.bag.item_indexs.erase(index)
+				print(index, " old owner ", owner.index, " new owner ", new_owner.index)
 			
-			if index_f != -1:
-				owner.bag.item_indexs.remove(index_f)
-		
-		if owner != null:	
-			print(index, " old owner ", owner.index, " new owner ", new_owner.index)
-		owner = new_owner
-		owner.bag.item_indexs.append(index)
+			owner = new_owner
+			owner.bag.item_indexs.append(index)
 	
 	func destroy():
-		print(index, " DESTROY ", owner.index)
-		var index_f = Global.main.items.find(self)
+		print(index, " DESTROYED by ", owner.index)
+		var index_f = Global.array.items.find(self)
 		
 		if index_f != -1:
-			Global.main.items.remove(index_f)
+			Global.array.items.remove(index_f)
 		
-		print(owner.bag.item_indexs.size())
 		if owner != null:
-			index_f = owner.bag.item_indexs.find(index)
-			
-			print(" @ ", index_f)
-			if index_f != -1:
-				owner.bag.item_indexs.remove(index_f)
-		print(owner.bag.item_indexs.size())
+			owner.bag.item_indexs.erase(index)
+		print(owner.bag.item_indexs, "!=", Global.array.items[index_f].index)
+		#print(owner.bag.item_indexs.size())
 
 	func open():
-		print(1,features)
+		#print(1,features)
 		if features.what == "loot orb":
-			print(2,features)# owner.
+			#print(2,features)# owner.
 			var booty = Loot.Booty.new()
 			booty.set_(self)
 			destroy()
-
 
 class Fibonacci:
 	var n = 10
@@ -173,14 +165,14 @@ class Booty:
 	var loss
 	
 	func set_(item_):
-		index = Global.primary_key.booty
+		index = Global.list.primary_key.booty
 		where = item_.features.where
 		grade = item_.features.grade
 		loss = item_.features.loss
-		Global.primary_key.booty += 1
+		Global.list.primary_key.booty += 1
 	
 	func roll(owner):
-		var options =  Global.booty_list[where]
+		var options =  Global.list.booty_list[where]
 		Global.rng.randomize()
 		var index_r = Global.rng.randi_range(0, options.size()-1)
 		
@@ -195,4 +187,3 @@ class Booty:
 						owner.extract["beta"] += extract
 					"herb breed 2":
 						owner.extract["gamma"] += extract
-		

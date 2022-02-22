@@ -6,3 +6,5 @@
 script = ExtResource( 1 )
 
 [node name="camera" type="Camera2D" parent="."]
+
+[node name="sprites" type="Node" parent="."]
